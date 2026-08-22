@@ -1,0 +1,29 @@
+Launching a new destination Amazon DM API involves following steps:
+- built new Dist_types to be used below
+- built new Taxonomy deliverer
+- updated code for transposer to pack the records in a single DistributionRecord (DR)
+- built new Request Builder
+- built new Request Sender
+- deploy to different services like opi-temporal, 
+- created new RLG in DB
+- created new endpoints with properties
+- created new taxonomy endpoints with properties
+- created code OAuth and validated it
+- created new Integration Group (IG) using all the above
+- created new Destination account (DA) using all the above
+- created new redpanda topics: publisher in one cluster & consumer in another cluster. Needed to consider number of partitions, time/size before data is deleted
+- redeployed different services to ensure they use the latest of the above
+
+All the code is in /Users/pastha/code/liveramp/dist & /Users/pastha/code/liveramp/dist_types. look for all the code committed by Prateek Asthana in the past 3-4 months for the same. You can review the git history and let me know what you see there.
+
+I would like to document the steps required/knowledge gained during launching a new destination API. Either I document them or create an agent so that this process is automated as much as possible. I am choosing the later.
+
+I would like agents to do the below when I specify that I need to launch a new destination: 
+- user specifies create a new Jira epic for this launch. Agent creates epic and Jira tasks for all the steps listed above. There is a 1-1 mapping between steps and tasks. Name the task appropriately such that it reflects the name of the destination & also the step.
+- once the user specifies which step or which Jira task he needs to work on, we can a master agent that selects a speciliazed child agent to do the task or build the code. This implies there are specialized agents for each step mentioned above. The user is only interacting with the master agent which delegates to a specialized child agent. Specialized agent has all the context/knowledge to execute the Jira task. The specialized agent will then ask the user for relevant inputs like: property names for the endpoints, are they externally configurable or not and many more things. The specialized agent uses this knowledge to execute the task. Also, all this information needs to be updated into the Jira task. Information gathered by each agent and the result of the task execution is updated into Jira as I mentioned. This could then be used by a different step or agent for its work. Example: the new properties we specify in dist_types are applicable for request building, taxonomy building, DA building and so on. We either specify the inter-dependencies between the tasks so that dependent tasks go to relevant jira tasks and pick up details or we persist all this information gathered and results in a global context which all agents have access to. This global context should be persisted as the agents are working on different times.
+
+I have specified a hierarchial architecture for the agents above. But you suggest options to me if this is good or not and suggest alternatives. Also, the agent can be run through cursor or claude. We should be able to specify the model and thinking level. Suggest how we do this?
+
+
+
+
