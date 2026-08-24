@@ -5,7 +5,7 @@ Agent harness for **OPI streaming destination launches** at LiveRamp. **Share th
 | | |
 |---|---|
 | **Repo** | https://github.com/prateeka/agent-demo |
-| **Branch** | `launchpad-agent-harness` |
+| **Branch** | `master` |
 | **Record layer today** | `launches/{slug}/` files (`epic.md` + `tasks/*.md`) |
 | **Record layer target** | Jira Epic + child issues (MCP) — same harness, swap later |
 | **Reference launch** | `_template/` now; Amazon DM example **later** |
@@ -44,7 +44,6 @@ This repo is the **initial agent harness** — orchestrator + workflow + step sk
 ```bash
 git clone https://github.com/prateeka/agent-demo.git
 cd agent-demo
-git checkout launchpad-agent-harness   # if not already on this branch
 ```
 
 Open the folder in **Cursor** (or Claude Code).
