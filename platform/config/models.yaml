@@ -1,0 +1,39 @@
+# Default model per workflow step. Orchestrator passes to Task child agents.
+
+defaults:
+  model: composer-2.5
+  thinking: medium
+
+orchestrator:
+  model: composer-2.5
+  thinking: low
+
+steps:
+  dist-types:
+    model: claude-4.6-sonnet-medium-thinking
+  oauth:
+    model: claude-4.6-sonnet-medium-thinking
+  taxonomy-deliverer:
+    model: claude-4.6-sonnet-medium-thinking
+  streaming-stack:
+    model: claude-4.6-sonnet-medium-thinking
+  argocd-artifacts:
+    model: composer-2.5
+    thinking: medium
+  platform-config:
+    model: claude-4.6-sonnet-medium-thinking
+  redpanda-topics:
+    model: composer-2.5
+    thinking: medium
+  deploy:
+    model: composer-2.5
+    thinking: medium
+  tech-discovery:
+    model: composer-2.5
+    thinking: medium
+  release-ticket:
+    model: composer-2.5
+    thinking: low
+  grafana-dashboards:
+    model: composer-2.5
+    thinking: medium

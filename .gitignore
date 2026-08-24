@@ -1,0 +1,5 @@
+# Active launches may contain internal URLs — do not commit except templates/reference.
+launches/*
+!launches/_template/
+
+scripts/.venv/

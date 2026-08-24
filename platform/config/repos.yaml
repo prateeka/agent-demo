@@ -1,0 +1,13 @@
+# Code repo paths for step agents (dist / dist_types).
+# Required for implementation steps — set before running code work:
+#
+#   export LAUNCHPAD_DIST=/path/to/dist
+#   export LAUNCHPAD_DIST_TYPES=/path/to/dist_types
+#
+# Verify: ./scripts/resolve-repos.sh
+
+repos:
+  agent-demo: .
+
+# dist and dist_types resolve from LAUNCHPAD_DIST / LAUNCHPAD_DIST_TYPES at runtime
+# (see scripts/resolve-repos.sh). No in-repo stubs.

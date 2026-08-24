@@ -1,0 +1,132 @@
+# Shared workflow for all destination launches.
+#
+# Record layer today: launches/{slug}/ (epic.md + tasks/*.md) — see FILES-MODEL.md
+# Record layer target: Jira Epic + child issues — see JIRA-MODEL.md
+#
+# Orchestrator reads: checklist, deps, jira_title, summary.
+# Child agents read step SKILL.md — NOT this file for domain work.
+#
+# summary: human-facing precis for checklist — NOT the execution spec.
+version: 1
+
+steps:
+  - id: dist-types
+    skill: dist-types
+    jira_title: Dist types (Thrift schemas)
+    summary: >-
+      Add dist_types Thrift definitions — streaming format, endpoint config,
+      taxonomy config, OAuth endpoint union. Bump codegen per repo convention.
+    depends_on: []
+    repos: [dist_types]
+
+  - id: oauth
+    skill: oauth
+    jira_title: OAuth client and endpoint config
+    summary: >-
+      Implement OAuth in dist + dist_types — token URL, headers, metadata keys,
+      client implementation, validation.
+    depends_on: [dist-types]
+    repos: [dist, dist_types]
+
+  - id: taxonomy-deliverer
+    skill: taxonomy-deliverer
+    jira_title: Taxonomy deliverer
+    summary: >-
+      Build taxonomy deliverer in dist — sync flow, mandatory headers,
+      taxonomy endpoint wiring, tests.
+    depends_on: [dist-types, oauth]
+    repos: [dist, dist_types]
+
+  - id: streaming-stack
+    skill: streaming-stack
+    jira_title: Streaming stack
+    summary: >-
+      Audience ingestion — partner API client, request builder/sender, transposer,
+      record handler, destination-specific metrics.
+    depends_on: [dist-types, oauth]
+    repos: [dist, dist_types]
+
+  - id: platform-config
+    skill: platform-config
+    jira_title: Platform config (RLG, endpoints, IG, DA)
+    summary: >-
+      Platform objects — RLG, endpoints, IG, DA. Plan/runbook by default;
+      live object creation only if user explicitly asks.
+    depends_on: [taxonomy-deliverer, streaming-stack]
+    repos: [agent-demo]
+
+  - id: argocd-artifacts
+    skill: argocd-artifacts
+    jira_title: ArgoCD / RLG helm artifacts
+    summary: >-
+      ArgoCD helm values for destination RLG — requires platform.rlg_id.
+    depends_on: [streaming-stack, platform-config]
+    repos: [dist]
+
+  - id: redpanda-topics
+    skill: redpanda-topics
+    jira_title: Redpanda topics
+    summary: >-
+      Topic design; emit artifacts/redpanda-topics.yaml. Live topic creation
+      only if user explicitly asks.
+    depends_on: [streaming-stack]
+    repos: [agent-demo]
+
+  - id: grafana-dashboards
+    skill: grafana-dashboards
+    jira_title: Grafana dashboards and alerts
+    summary: >-
+      Dashboards and alerts — needs RLG id and metric names from prior steps.
+    depends_on: [platform-config, streaming-stack, taxonomy-deliverer]
+    repos: [agent-demo]
+
+  - id: deploy
+    skill: deploy
+    jira_title: Deploy services
+    summary: >-
+      Deploy plan — service matrix, job references, smoke checklist.
+      No triggers unless user explicitly asks.
+    depends_on: [argocd-artifacts, platform-config, redpanda-topics]
+    repos: [dist]
+
+  - id: tech-discovery
+    skill: tech-discovery
+    jira_title: Tech Discovery (Confluence)
+    summary: >-
+      Confluence Tech Discovery draft for QA — not the test plan.
+    depends_on: [deploy, grafana-dashboards]
+    repos: [agent-demo]
+
+  - id: release-ticket
+    skill: release-ticket
+    jira_title: Release ticket
+    summary: >-
+      Release ticket + PR aggregation. Requires explicit user approval.
+    depends_on: [deploy]
+    repos: [agent-demo]
+
+presets:
+  all:
+    - dist-types
+    - oauth
+    - taxonomy-deliverer
+    - streaming-stack
+    - platform-config
+    - argocd-artifacts
+    - redpanda-topics
+    - grafana-dashboards
+    - deploy
+    - tech-discovery
+    - release-ticket
+  implementation:
+    - dist-types
+    - oauth
+    - taxonomy-deliverer
+    - streaming-stack
+    - platform-config
+    - argocd-artifacts
+    - redpanda-topics
+    - deploy
+  minimal:
+    - dist-types
+    - oauth
