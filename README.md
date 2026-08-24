@@ -29,7 +29,7 @@ Launching a new **OPI streaming destination** is **30+ manual steps** across cod
 |---|---|
 | **Plan** | Shared workflow → launch checklist (like a Jira plan) |
 | **Code** | Step skills scaffold Thrift / Java in `dist` / `dist_types` |
-| **Infra** | Emit Redpanda / deploy YAML patterns (e.g. `artifacts/redpanda-topics.yaml`) |
+| **Infra** | Emit Redpanda topic YAML (e.g. `artifacts/redpanda-topics.yaml`); platform UI runbooks for RLG/endpoints/IG/DA |
 | **Learn** | Skills and template improve after each launch (stretch goal during hackathon) |
 
 This repo is the **initial agent harness** — orchestrator + workflow + step skills — not the full product. A CLI (`launchpad plan`, `launchpad scaffold`) may sit on top later.
@@ -146,8 +146,8 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 ```
 
 - **You never invoke step skills directly** — orchestrator spawns children.
-- **Deploy:** plan only unless you explicitly ask to trigger Jenkins/ArgoCD.
-- **Platform config / Redpanda:** plan or emit YAML by default; live infra only if you ask.
+- **Release ticket first** when in the checklist — all Jira/PR titles reference it.
+- **Platform UI (`*-ui`) / RLG / Redpanda:** UI runbooks and YAML artifacts by default; live DB/UI/topic changes only if you explicitly ask.
 
 ---
 
@@ -155,11 +155,11 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 
 | Phase | What we did |
 |---|---|
-| **1. Workflow design** | Eleven steps in `platform/workflow.yaml` — DAG, dependencies, human summaries for checklists |
+| **1. Workflow design** | Fifteen steps in `platform/workflow.yaml` — DAG, dependencies, human summaries for checklists |
 | **2. Agent architecture** | Thin **orchestrator** routes; **fat step skills** do the work; child agents keep context clean |
 | **3. Context model** | **Global** facts on `epic.md` (`## Global context` YAML); **local** detail on each `tasks/{step_id}.md` |
 | **4. Files-first demo** | `launches/` folder layout and `_template/` — **no Jira MCP required for hackathon** |
-| **5. Safety rules** | Deploy / infra plan-only unless user explicitly asks; one launch folder per destination |
+| **5. Safety rules** | Confirm before release ticket, platform UI, RLG, and Redpanda steps; plan/runbook by default; one launch folder per destination |
 
 **Not done yet (expected hackathon work):** deeper step skills, validators, Jira swap-in, full code scaffolding, learning loop / template versioning, QA smoke step, multi-env keys.
 
