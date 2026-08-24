@@ -182,23 +182,31 @@ Details: `platform/docs/FILES-MODEL.md`.
 
 ## Workflow steps
 
-**Authoritative order and dependencies:** `platform/workflow.yaml` (not the table row numbers below — some steps run in parallel after `oauth`).
+**Authoritative order and dependencies:** `platform/workflow.yaml`.
 
 | Step ID | What it covers | Depends on |
 |---|---|---|
-| `dist-types` | Thrift in `dist_types` | — |
+| `release-ticket` | Release ticket — **run first**; all Jira/PRs reference it | — |
+| `dist-types` | Thrift in `dist_types` | release-ticket |
 | `oauth` | OAuth client + endpoint config | dist-types |
-| `taxonomy-deliverer` | Taxonomy deliverer | dist-types, oauth |
-| `streaming-stack` | Transposer, request builder/sender, metrics | dist-types, oauth |
-| `platform-config` | RLG, endpoints, IG, DA | taxonomy-deliverer, streaming-stack |
-| `argocd-artifacts` | ArgoCD / RLG helm values | streaming-stack, **platform-config** |
-| `redpanda-topics` | Topic design + YAML artifact | streaming-stack |
-| `grafana-dashboards` | Dashboards and alerts | platform-config, streaming-stack, taxonomy-deliverer |
-| `deploy` | **Plan only** — service matrix, smoke checklist | argocd-artifacts, platform-config, redpanda-topics |
-| `tech-discovery` | Confluence draft for QA | deploy, grafana-dashboards |
-| `release-ticket` | Release + PR roll-up | deploy |
+| `taxonomy-deliverer` | Taxonomy on destination (code in dist) | dist-types, oauth |
+| `partner-api-client` | Partner API client + constants | dist-types, oauth |
+| `request-builder-sender` | Request builder + sender | partner-api-client |
+| `transposer-record-handler` | Transposer, record handler, field selector, metrics | request-builder-sender |
+| `rlg-addition` | RLG DB addition | release-ticket |
+| `delivery-endpoints-ui` | Delivery endpoints via UI | rlg-addition, dist-types, oauth |
+| `taxonomy-ui` | Taxonomy endpoints via UI | taxonomy-deliverer |
+| `ig-ui` | Integration group via UI | delivery-endpoints-ui, taxonomy-ui |
+| `da-ui` | Destination account via UI | ig-ui |
+| `redpanda-topics` | Redpanda topic creation + YAML artifact | transposer-record-handler |
+| `grafana-dashboards` | Dashboards and alerts | rlg-addition, transposer-record-handler, taxonomy-deliverer |
+| `tech-discovery` | Confluence draft for QA | grafana-dashboards, transposer-record-handler |
 
-**Presets:** `minimal` (dist-types + oauth), `implementation` (through deploy), `all`.
+**Presets:** `minimal` (release-ticket + dist-types + oauth), `implementation` (through redpanda-topics), `all`.
+
+**Platform naming:** `*-ui` = platform UI runbooks (API later). `rlg-addition` = DB insert for RLG. `taxonomy-deliverer` = destination taxonomy code (not `taxonomy-ui`).
+
+**Platform UI order:** `rlg-addition` → `delivery-endpoints-ui`; `taxonomy-deliverer` → `taxonomy-ui`; then `ig-ui` (links endpoints + taxonomy) → `da-ui`.
 
 **Amazon DM reference launch** (RLG 1101) — planned; use `_template/` and create-new flow for now.
 

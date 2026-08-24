@@ -17,7 +17,7 @@ Do **not** write the QA test plan — only the tech discovery document.
 
 ## Read first — exact global keys
 
-Read `launches/{slug}/epic.md` → `## Global context` (destination, properties, oauth, platform, redpanda, deploy, grafana keys as available).
+Read `launches/{slug}/epic.md` → `## Global context` (destination, properties, oauth, platform, redpanda, grafana keys as available).
 
 ## Write to step task (local)
 

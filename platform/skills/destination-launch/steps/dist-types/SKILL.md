@@ -19,6 +19,7 @@ If issue `## Details` is filled, check repo for existing Thrift structs/unions a
 
 ## Read first — exact global keys
 
+- `release.ticket_id` — PR title prefix once set
 - `destination.api_family`, `destination.display_name`
 
 ## Ask the user

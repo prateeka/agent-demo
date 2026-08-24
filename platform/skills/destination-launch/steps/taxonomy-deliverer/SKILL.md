@@ -1,11 +1,13 @@
 ---
 name: destination-launch-taxonomy-deliverer
-description: Taxonomy deliverer implementation step for destination launches.
+description: Taxonomy on destination — deliverer code in dist/dist_types (partner taxonomy API).
 ---
 
 # Step: taxonomy-deliverer
 
-Build taxonomy deliverer in `dist` + config in `dist_types`.
+Implement **taxonomy on the destination** in code — deliverer, sync flow, partner taxonomy API wiring in `dist` + `dist_types`.
+
+This is **not** `taxonomy-ui` (platform UI endpoint objects). There is no separate backend step — destination taxonomy is code here.
 
 ## Repos
 
@@ -13,9 +15,8 @@ Build taxonomy deliverer in `dist` + config in `dist_types`.
 
 ## Read first
 
-- epic.md ## Global context (launch files) — `properties.taxonomy[]`, `oauth.*`, `thrift.taxonomy_config`
-- This step's Jira issue (from orchestrator)
-
+- epic.md ## Global context — `release.ticket_id`, `properties.taxonomy[]`, `oauth.*`, `thrift.taxonomy_config`
+- This step's task file (from orchestrator)
 
 ## Ask the user
 
@@ -32,11 +33,9 @@ Build taxonomy deliverer in `dist` + config in `dist_types`.
 3. Sharing rules (DSP/AMC etc.)
 4. Unit + integration tests
 
-## Write to step task (all answers)
+## Write to step task (local)
 
-- Update issue: per `JIRA-MODEL.md`
-- **Body:** header details, endpoint paths, sharing rule narrative, test results
-- Full header values and endpoint URLs → **task only**
+- Header details, endpoint paths, sharing rule narrative, test results, PR link
 
 ## Return global keys (orchestrator merges)
 

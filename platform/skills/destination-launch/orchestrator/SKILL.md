@@ -45,8 +45,8 @@ Ask **before** creating task files or spawning when the user:
 
 | # | Step | Status | Notes |
 |---|------|--------|-------|
-| 1 | `dist-types` | pending | **ready now** |
-| 2 | `oauth` | pending | waiting on dist-types |
+| 1 | `release-ticket` | pending | **ready now** |
+| 2 | `dist-types` | pending | waiting on release-ticket |
 
 Include: `not_created`, `pending`, `in_progress` (resumable), `done`, `blocked` (+ reason). Mark **ready now** when deps are `done` and status is `pending`.
 
@@ -57,11 +57,11 @@ Include: `not_created`, `pending`, `in_progress` (resumable), `done`, `blocked` 
 
 If the user did not specify preset or steps, **ask first**:
 
-> Which checklist preset? **`minimal`** (dist-types + oauth) · **`implementation`** (through deploy) · **`all`** · or name specific step ids
+> Which checklist preset? **`minimal`** (release-ticket + dist-types + oauth) · **`implementation`** (through redpanda-topics) · **`all`** · or name specific step ids
 
 Do **not** default to a preset silently.
 
-After scaffolding, show created tasks + the numbered menu above; ask which step to run first.
+After scaffolding, show created tasks + the numbered menu above; ask which step to run first. **Recommend `release-ticket` first** when it is in the checklist and not yet `done`.
 
 ## Rules
 
@@ -72,9 +72,12 @@ After scaffolding, show created tasks + the numbered menu above; ask which step 
 5. Routing: `workflow.yaml` + task file `status` in YAML frontmatter (`pending` | `in_progress` | `done` | `blocked`).
 6. Task scaffolding from `workflow.yaml` — do not read all step SKILL.md at launch.
 7. Step identity: file `tasks/{step_id}.md` (filename = step id).
-8. **Approval before spawn:** `release-ticket`, `platform-config`, `redpanda-topics`.
-9. **Deploy:** spawn only when user explicitly asks; plan by default; no Jenkins/ArgoCD unless user explicitly requests trigger in chat.
-10. **Infrastructure:** `platform-config` and `redpanda-topics` default to **plan / emit YAML** — no live RLG/topic creation unless user explicitly asks.
+8. **Release ticket first:** `release-ticket` has no deps — run before other steps when tracking Jira/PRs against one release key.
+9. **Approval before spawn:** `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`.
+10. **Platform UI steps (`*-ui`):** default to **textual UI runbook** — no REST API until platform team documents one; record ids on task file after operator confirms live UI work.
+11. **`rlg-addition`:** platform DB insert for RLG — runbook/SQL today, not dist code.
+12. **PR linkage:** remind children that PR titles use `[{release.ticket_id}]` once `release.ticket_id` is in global context.
+13. **End-of-iteration cleanup (harness edits):** before finishing any turn that renames, removes, or splits steps/docs, delete redundant files and empty directories. Step folders must match `workflow.yaml` ids; remove stale step symlinks from `.cursor/skills/` and `.claude/skills/`; grep the repo for removed step ids and fix or delete dead references. Briefly note cleanup in the user summary when anything was removed.
 
 ## Record layer — files (active)
 
@@ -117,7 +120,7 @@ Body: Scope, Depends on, Skill path, Details sentinel.
 3. **Checklist** from `workflow.yaml` — offer presets `all`, `implementation`, `minimal`.
 4. **Warn** if selected step has unselected / missing `depends_on` task files.
 5. **Create** `tasks/{step_id}.md` for selected steps only.
-6. **Respond:** folder path, created tasks, what's runnable when deps are `done`.
+6. **Respond:** folder path, created tasks, what's runnable when deps are `done`. Note that **`release-ticket` should run first** when included.
 
 ## Resolve launch
 
@@ -135,11 +138,11 @@ User gives launch slug or display name → folder under `launches/`.
 
 1. Resolve launch folder + task file (create task if missing, user confirms)
 2. Warn if `depends_on` not `done`
-3. Confirm before spawn: `release-ticket`, `platform-config`, `redpanda-topics`
-4. `deploy` only if user explicitly requested deploy work
-5. Spawn one child with launch path + task path
-6. Merge returned `global_keys` into `epic.md`
-7. Brief summary to user
+3. Confirm before spawn: `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`
+4. Spawn one child with launch path + task path
+5. Merge returned `global_keys` into `epic.md`
+6. Brief summary to user
+7. If the child renamed/removed harness files (skills, workflow, docs): run **end-of-iteration cleanup** (rule 13)
 
 ## Child spawn contract
 

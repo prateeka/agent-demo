@@ -1,4 +1,4 @@
-# Shared workflow for all destination launches.
+# Shared workflow for destination launches.
 #
 # Record layer today: launches/{slug}/ (epic.md + tasks/*.md) — see FILES-MODEL.md
 # Record layer target: Jira Epic + child issues — see JIRA-MODEL.md
@@ -7,16 +7,25 @@
 # Child agents read step SKILL.md — NOT this file for domain work.
 #
 # summary: human-facing precis for checklist — NOT the execution spec.
-version: 1
+version: 2
 
 steps:
+  - id: release-ticket
+    skill: release-ticket
+    jira_title: Release ticket
+    summary: >-
+      Create the Release ticket first. All step Jira tickets and PR titles reference
+      release.ticket_id from global context.
+    depends_on: []
+    repos: [agent-demo]
+
   - id: dist-types
     skill: dist-types
     jira_title: Dist types (Thrift schemas)
     summary: >-
       Add dist_types Thrift definitions — streaming format, endpoint config,
       taxonomy config, OAuth endpoint union. Bump codegen per repo convention.
-    depends_on: []
+    depends_on: [release-ticket]
     repos: [dist_types]
 
   - id: oauth
@@ -30,38 +39,84 @@ steps:
 
   - id: taxonomy-deliverer
     skill: taxonomy-deliverer
-    jira_title: Taxonomy deliverer
+    jira_title: Taxonomy on destination (code)
     summary: >-
-      Build taxonomy deliverer in dist — sync flow, mandatory headers,
-      taxonomy endpoint wiring, tests.
+      Taxonomy deliverer code in dist — partner taxonomy API, sync flow, headers,
+      tests. This is the code step for taxonomy on the destination (not platform UI).
     depends_on: [dist-types, oauth]
     repos: [dist, dist_types]
 
-  - id: streaming-stack
-    skill: streaming-stack
-    jira_title: Streaming stack
+  - id: partner-api-client
+    skill: partner-api-client
+    jira_title: Partner API client
     summary: >-
-      Audience ingestion — partner API client, request builder/sender, transposer,
-      record handler, destination-specific metrics.
+      Partner API client and constants in dist — base URLs, auth wiring,
+      shared client utilities for streaming delivery.
     depends_on: [dist-types, oauth]
     repos: [dist, dist_types]
 
-  - id: platform-config
-    skill: platform-config
-    jira_title: Platform config (RLG, endpoints, IG, DA)
+  - id: request-builder-sender
+    skill: request-builder-sender
+    jira_title: Request builder and sender
     summary: >-
-      Platform objects — RLG, endpoints, IG, DA. Plan/runbook by default;
-      live object creation only if user explicitly asks.
-    depends_on: [taxonomy-deliverer, streaming-stack]
+      Request builder and request sender in dist — payload shape, operation
+      types, send path, unit tests.
+    depends_on: [partner-api-client]
+    repos: [dist, dist_types]
+
+  - id: transposer-record-handler
+    skill: transposer-record-handler
+    jira_title: Transposer, record handler, field selector
+    summary: >-
+      Transposer, record handler, relevant field selector, config wiring,
+      destination-specific metrics for Grafana.
+    depends_on: [request-builder-sender]
+    repos: [dist, dist_types]
+
+  - id: rlg-addition
+    skill: rlg-addition
+    jira_title: RLG (DB addition)
+    summary: >-
+      Add RLG record in platform DB. Runbook/SQL today; API when platform team
+      ships it.
+    depends_on: [release-ticket]
     repos: [agent-demo]
 
-  - id: argocd-artifacts
-    skill: argocd-artifacts
-    jira_title: ArgoCD / RLG helm artifacts
+  - id: delivery-endpoints-ui
+    skill: delivery-endpoints-ui
+    jira_title: Delivery endpoints (UI)
     summary: >-
-      ArgoCD helm values for destination RLG — requires platform.rlg_id.
-    depends_on: [streaming-stack, platform-config]
-    repos: [dist]
+      Create delivery endpoints via platform UI. Textual runbook today; REST API
+      when platform team ships it.
+    depends_on: [rlg-addition, dist-types, oauth]
+    repos: [agent-demo]
+
+  - id: taxonomy-ui
+    skill: taxonomy-ui
+    jira_title: Taxonomy endpoints (UI)
+    summary: >-
+      Create taxonomy endpoint objects via platform UI. Textual runbook today;
+      REST API when platform team ships it.
+    depends_on: [taxonomy-deliverer]
+    repos: [agent-demo]
+
+  - id: ig-ui
+    skill: ig-ui
+    jira_title: Integration group (UI)
+    summary: >-
+      Create integration group via platform UI. Textual runbook today; REST API
+      when platform team ships it. Wires delivery endpoints + taxonomy endpoints.
+    depends_on: [delivery-endpoints-ui, taxonomy-ui]
+    repos: [agent-demo]
+
+  - id: da-ui
+    skill: da-ui
+    jira_title: Destination account (UI)
+    summary: >-
+      Create destination account via platform UI. Textual runbook today; REST
+      API when platform team ships it.
+    depends_on: [ig-ui]
+    repos: [agent-demo]
 
   - id: redpanda-topics
     skill: redpanda-topics
@@ -69,7 +124,7 @@ steps:
     summary: >-
       Topic design; emit artifacts/redpanda-topics.yaml. Live topic creation
       only if user explicitly asks.
-    depends_on: [streaming-stack]
+    depends_on: [transposer-record-handler]
     repos: [agent-demo]
 
   - id: grafana-dashboards
@@ -77,56 +132,49 @@ steps:
     jira_title: Grafana dashboards and alerts
     summary: >-
       Dashboards and alerts — needs RLG id and metric names from prior steps.
-    depends_on: [platform-config, streaming-stack, taxonomy-deliverer]
+    depends_on: [rlg-addition, transposer-record-handler, taxonomy-deliverer]
     repos: [agent-demo]
-
-  - id: deploy
-    skill: deploy
-    jira_title: Deploy services
-    summary: >-
-      Deploy plan — service matrix, job references, smoke checklist.
-      No triggers unless user explicitly asks.
-    depends_on: [argocd-artifacts, platform-config, redpanda-topics]
-    repos: [dist]
 
   - id: tech-discovery
     skill: tech-discovery
     jira_title: Tech Discovery (Confluence)
     summary: >-
       Confluence Tech Discovery draft for QA — not the test plan.
-    depends_on: [deploy, grafana-dashboards]
-    repos: [agent-demo]
-
-  - id: release-ticket
-    skill: release-ticket
-    jira_title: Release ticket
-    summary: >-
-      Release ticket + PR aggregation. Requires explicit user approval.
-    depends_on: [deploy]
+    depends_on: [grafana-dashboards, transposer-record-handler]
     repos: [agent-demo]
 
 presets:
   all:
+    - release-ticket
     - dist-types
     - oauth
     - taxonomy-deliverer
-    - streaming-stack
-    - platform-config
-    - argocd-artifacts
+    - partner-api-client
+    - request-builder-sender
+    - transposer-record-handler
+    - rlg-addition
+    - delivery-endpoints-ui
+    - taxonomy-ui
+    - ig-ui
+    - da-ui
     - redpanda-topics
     - grafana-dashboards
-    - deploy
     - tech-discovery
-    - release-ticket
   implementation:
+    - release-ticket
     - dist-types
     - oauth
     - taxonomy-deliverer
-    - streaming-stack
-    - platform-config
-    - argocd-artifacts
+    - partner-api-client
+    - request-builder-sender
+    - transposer-record-handler
+    - rlg-addition
+    - delivery-endpoints-ui
+    - taxonomy-ui
+    - ig-ui
+    - da-ui
     - redpanda-topics
-    - deploy
   minimal:
+    - release-ticket
     - dist-types
     - oauth

@@ -48,5 +48,6 @@ Repos from `workflow.yaml`. Run `./scripts/resolve-repos.sh` — requires `LAUNC
 
 1. `platform/workflow.yaml` entry
 2. Copy sections above into `steps/{name}/SKILL.md` — document read/return keys inline
+3. On rename/remove: delete the old skill folder, empty parent dirs, and grep for stale step ids in README, `models.yaml`, `generate-reference-tasks.py`, and orchestrator rules
 
 See `platform/docs/FILES-MODEL.md`.

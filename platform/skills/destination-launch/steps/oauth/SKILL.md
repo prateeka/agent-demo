@@ -13,6 +13,7 @@ If issue `## Details` is filled, check repo for existing OAuth client before re-
 
 ## Read first — exact global keys
 
+- `release.ticket_id`
 - `destination.slug`, `destination.api_family`
 - `thrift.oauth_endpoint_config`
 

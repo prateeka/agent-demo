@@ -12,6 +12,7 @@
 |---|---|
 | **Epic** | One per launch |
 | **Epic description** | Business summary + `## Global context` YAML (**orchestrator writes only**) |
+| **Release ticket** | Created in step `release-ticket` — **first**; all step tickets and PRs link to it |
 | **Story/Task** | Per selected workflow step; label `dstep:{step_id}` |
 | **Task description (stub)** | From `workflow.yaml` + Details sentinel |
 | **Task description (full)** | Child writes step-local context when executed |
@@ -21,17 +22,12 @@
 
 - **Children do not write Epic.** They return `global_keys` in summary; orchestrator merges into `## Global context`.
 - **One child at a time** per Epic
+- **`release.ticket_id`** — set by `release-ticket` step; later steps and PRs reference it
 
 ## Step issue identity
 
 - Primary: Jira label `dstep:{step_id}`
 - Fallback: `## Step` / `dstep:{step_id}` in description body
-
-## Deploy
-
-- **No deployment by default.** Deploy step documents a plan (service matrix, job names).
-- Trigger Jenkins/ArgoCD only when the user **explicitly** asks to deploy/trigger in chat.
-- Orchestrator spawns `deploy` child only when user explicitly requests deploy work.
 
 ## Orchestrator routing
 
@@ -50,11 +46,11 @@
 
 ## Approval gates
 
-Explicit user confirm before spawning: `release-ticket`, `platform-config`, `redpanda-topics` (files mode and Jira target).
+Explicit user confirm before spawning: `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics` (files mode and Jira target).
 
 ## PR convention
 
-`[JIRA-KEY] description`
+`[{release.ticket_id}] description`
 
 ## Jira MCP failure
 

@@ -9,9 +9,9 @@ Create **Grafana dashboards and alerts** for the new destination.
 
 ## Read first — exact global keys
 
+- `release.ticket_id`
 - `platform.rlg_id`
 - `grafana.metrics.streaming`, `grafana.metrics.taxonomy`
-- `deploy.services` (if deploy step done)
 
 ## Grafana MCP rules (when available)
 

@@ -9,31 +9,37 @@ orchestrator:
   thinking: low
 
 steps:
+  release-ticket:
+    model: composer-2.5
+    thinking: low
   dist-types:
     model: claude-4.6-sonnet-medium-thinking
   oauth:
     model: claude-4.6-sonnet-medium-thinking
   taxonomy-deliverer:
     model: claude-4.6-sonnet-medium-thinking
-  streaming-stack:
+  partner-api-client:
     model: claude-4.6-sonnet-medium-thinking
-  argocd-artifacts:
-    model: composer-2.5
-    thinking: medium
-  platform-config:
+  request-builder-sender:
+    model: claude-4.6-sonnet-medium-thinking
+  transposer-record-handler:
+    model: claude-4.6-sonnet-medium-thinking
+  rlg-addition:
+    model: claude-4.6-sonnet-medium-thinking
+  delivery-endpoints-ui:
+    model: claude-4.6-sonnet-medium-thinking
+  taxonomy-ui:
+    model: claude-4.6-sonnet-medium-thinking
+  ig-ui:
+    model: claude-4.6-sonnet-medium-thinking
+  da-ui:
     model: claude-4.6-sonnet-medium-thinking
   redpanda-topics:
-    model: composer-2.5
-    thinking: medium
-  deploy:
     model: composer-2.5
     thinking: medium
   tech-discovery:
     model: composer-2.5
     thinking: medium
-  release-ticket:
-    model: composer-2.5
-    thinking: low
   grafana-dashboards:
     model: composer-2.5
     thinking: medium
