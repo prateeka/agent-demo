@@ -2,12 +2,17 @@
 
 Agent harness for **OPI streaming destination launches** at LiveRamp. **Share this repo** with anyone who wants to understand or try it.
 
+**New here?** Clone **`master`** (default branch) and read **this file** — it is the only onboarding doc you need:
+
+https://github.com/prateeka/agent-demo/blob/master/README.md
+
 | | |
 |---|---|
 | **Repo** | https://github.com/prateeka/agent-demo |
-| **Branch** | `master` |
+| **Branch** | `master` (all work is here — no feature branch to check out) |
 | **Record layer today** | `launches/{slug}/` files (`epic.md` + `tasks/*.md`) |
 | **Record layer target** | Jira Epic + child issues (MCP) — same harness, swap later |
+| **Hackathon connector spec** | `docs/connectors/amazon-dm-advertiser-spec.md` |
 | **Reference launch** | `_template/` now; Amazon DM example **later** |
 
 > **The harness does not need to be perfect** before the hackathon — we will fix gaps live. Feedback on direction and P0 demo blockers is welcome; polish is hackathon scope.
@@ -44,9 +49,10 @@ This repo is the **initial agent harness** — orchestrator + workflow + step sk
 ```bash
 git clone https://github.com/prateeka/agent-demo.git
 cd agent-demo
+# default branch is master — no checkout needed
 ```
 
-Open the folder in **Cursor** (or Claude Code).
+Open the folder in **Cursor** (or Claude Code). On GitHub, open **`README.md` on the `master` branch** if you are browsing without cloning.
 
 ### 2. Link the orchestrator skill (optional)
 
@@ -201,7 +207,8 @@ Details: `platform/docs/FILES-MODEL.md`.
 ## What's in the repo
 
 ```
-README.md                        # This file (team guide)
+README.md                        # This file (team guide — start here on master)
+docs/connectors/                 # Connector specs (e.g. amazon-dm-advertiser-spec.md)
 platform/workflow.yaml           # Step DAG — source of truth
 platform/config/repos.yaml       # dist / dist_types path resolution
 platform/skills/destination-launch/   # Committed — orchestrator + step skills
