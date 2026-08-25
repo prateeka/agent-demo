@@ -30,79 +30,71 @@ Thin router for destination launches.
 
 **Never spawn a child until the user has chosen a step** — by naming `{step_id}`, toggling checkboxes, or an explicit run phrase (e.g. *"run taxonomy-connector-scaffold"*, *"start taxonomy preset"*). **Exception:** **`release-ticket` auto-runs** after create launch (rule 8).
 
-### Dependency-ordered checklist (required format)
+### Dependency-ordered checklist
 
-Whenever the orchestrator shows workflow steps — **create launch**, **status**, **what's next** — use this format. Do **not** use a numbered-only table.
+Use for **scope selection (before create)** and when the user explicitly asks for status (*"status"*, *"what's next"*, *"show checklist"*).
+
+**Do not** print the full checklist after create launch completes or after a step finishes — use **Short response** below.
 
 **Build the list**
 
-1. Load all steps from `platform/workflow.yaml` (`id`, `jira_title`, `summary`, `depends_on`).
-2. **Sort in dependency order:** topological sort on `depends_on` (every dependency before its dependents). **Tie-break:** order steps appear in `workflow.yaml`.
-3. Render **one markdown task-list line per step** — **every** workflow step, always (never omit rows).
+1. Load all steps from `platform/workflow.yaml` (`id`, `jira_title`, `depends_on`).
+2. **Sort:** topological sort on `depends_on`; **tie-break:** order in `workflow.yaml`.
+3. **Scope selection:** only steps the user can toggle — **omit `release-ticket`** (auto on create; show in Setup block only).
+4. **Status view:** include every workflow step **in scope** (has `tasks/{step_id}.md`). **Omit `skipped`** steps — do not list unselected steps.
 
-**Setup block** (show after create launch and on status when relevant — always **include**, never skip):
+**Setup block** (one line each in short responses; optional header on full status):
 
-```markdown
-Setup:
+- `[x] Connector context — **done** · `{spec-filename}`` or `slug {slug}`
+- `[x] `release-ticket` — **done** · auto on create` (files only; show `release.ticket_id` when known)
 
-- [x] Connector context — **done** · `amazon-dm-advertiser-spec.md`
-- [x] `release-ticket` — Release ticket (files only) — **done** · auto on create
-```
-
-- **Connector context:** always **`[x]` … **done**** once `epic.md` exists. Label **`· {spec-filename}`** when seeded from an existing `docs/connectors/*-spec.md`; else **`· slug {slug}`** (no error, no invented spec path).
-- **`release-ticket`:** **`[x]` … **done** · auto on create** after auto-run; **`[x]` … **auto on create**** on scope selection before run completes.
-
-**Scope selection** (create launch — boxes = selected for this launch):
+**Scope selection** (before create — checkboxes required):
 
 ```markdown
-Setup:
-
-- [x] Connector context — **done** · `amazon-dm-advertiser-spec.md`
-- [x] `release-ticket` — Release ticket (files only) — **auto on create**
-
-Select steps for this launch:
+Select steps for this launch (`release-ticket` runs automatically):
 
 - [ ] `taxonomy-connector-scaffold` — Taxonomy connector scaffold
 - [ ] `taxonomy-partner-flow` — Taxonomy partner flow · depends on: taxonomy-connector-scaffold
 …
 ```
 
-**Status / execute** (every workflow step + setup block):
+**Full status checklist** (explicit status only — in-scope steps only, dependency order):
 
 ```markdown
-Setup:
-
-- [x] Connector context — **done** · slug `mac-apple`
-- [x] `release-ticket` — Release ticket (files only) — **done** · auto on create
-
-Launch checklist (dependency order):
-
-- [x] `taxonomy-connector-scaffold` — Taxonomy connector scaffold — **done**
-- [ ] `taxonomy-partner-flow` — Taxonomy partner flow — pending · **ready now**
-- [ ] `oauth` — OAuth client and endpoint config — skipped
-…
+- [x] `taxonomy-connector-scaffold` — **done**
+- [ ] `taxonomy-partner-flow` — pending · **ready now**
 ```
 
 **Line rules**
 
-| Mode | `[x]` means | `[ ]` means |
+| Mode | `[x]` | `[ ]` |
 |---|---|---|
-| Setup / connector | Context seeded in `epic.md` — always show **done** once launch exists | N/A before create |
-| Scope selection | User selected — create `tasks/{step_id}.md` | Not selected — no task file yet |
-| Status / execute | `status: done` | not done — `pending`, `in_progress`, `not_created`, `blocked`, or **`skipped`** |
-| **`release-ticket`** | Always **`[x]`** after create | Before auto-run: **`[x]` auto on create** only |
+| Scope selection | Selected — will create task file | Not selected |
+| Status | `status: done` | `pending`, `in_progress`, `blocked` |
+| **`release-ticket`** | Always done after create | Never on scope list — Setup only |
 
-- Append **`· **ready now**`** when the step has a task file, `status: pending`, and every `depends_on` task is `done`.
-- Append **`· resumable`** when `status: in_progress`.
-- **`skipped`** when no task file was created for this step (not selected at create) — **do not** use *not in scope*, *excluded*, or missing-spec error lines.
-- Append **`· depends on: id1, id2`** only when `depends_on` is **non-empty**.
-- When blocked/waiting, add **`· waiting on: id`**.
+- **`· **ready now**`** when task exists, `status: pending`, all deps `done`.
+- **`· resumable`** when `status: in_progress`.
+- **`· depends on: …`** only when `depends_on` non-empty — **never** duplicate with *waiting on*.
+- **Never** print *skipped*, *not in scope*, or *excluded* lines.
 
-**Presets** (`workflow.yaml` → `presets:`) pre-check scope boxes for **other** steps only — **`release-ticket` stays `[x]` fixed**. Presets: **`taxonomy`**, **`minimal`**, **`implementation`**, **`all`**.
+**Presets** pre-check scope boxes only (`taxonomy`, `minimal`, `implementation`, `all`) — not `release-ticket`.
 
-**Accept scope replies:** preset name · list of step ids · *"all except …"* · pasted checklist with toggled `[x]`/`[ ]`.
+### Short response (required after create launch and after step completes)
 
-**Dependency warning:** if user selects a step but not all of its `depends_on`, list missing deps and ask to add them or confirm anyway.
+After **create launch** (scope confirmed + `release-ticket` auto-run) and after a **step completes**, respond briefly — **no full checklist**:
+
+```markdown
+Launch at `launches/{slug}/`. In scope: `taxonomy-connector-scaffold`, `taxonomy-partner-flow`. `release-ticket` **done** (files only · RELEASE-{slug}).
+
+Which step should I run next? (`taxonomy-connector-scaffold` is **ready now**.) To add steps to scope, name step ids.
+```
+
+- One line for launch path + in-scope step ids.
+- One line for setup if needed (`release-ticket` id / connector **done**).
+- **End with exactly:** *Which step should I run next? (`{ready_step_id}` is **ready now**.) To add steps to scope, name step ids.*
+- If multiple ready steps: *(`{id1}` or `{id2}` are **ready now**.)*
+- If none ready: say which deps are blocking in **one sentence** — still no full checklist.
 
 ### When to ask (do not guess or auto-pick)
 
@@ -114,25 +106,31 @@ Ask **before** creating task files or spawning when the user:
 
 ### Status / what's next response format
 
-1. Resolve launch folder (ask slug if multiple launches exist).
-2. Load `workflow.yaml` and each `tasks/{step_id}.md` frontmatter (if any).
-3. Present the **dependency-ordered checklist** (status mode above) for **every** workflow step, including `release-ticket` as **`[x]` done** when auto-run completed or task `status: done`.
-4. **End with:** *"Which step should I run next? (step id from the list). To add steps to scope, name step ids."*
-5. **Wait for the user's reply** before spawning.
+Only when the user **explicitly** asks for status or checklist.
 
-If the user names **multiple ready steps**, confirm the ordered list, then run **one child at a time** in dependency order (rule 4).
+1. Resolve launch folder (ask slug if multiple launches exist).
+2. Load `workflow.yaml` and in-scope task files only.
+3. Present **full status checklist** (in-scope steps, dependency order) + Setup lines.
+4. **End with:** *Which step should I run next? (`{ready_id}` is **ready now**.) To add steps to scope, name step ids.*
+5. **Wait** before spawning.
+
+If the user names **multiple ready steps**, confirm order, run **one child at a time** (rule 4).
+
+**After create launch or step complete:** use **Short response** — not this section.
 
 ### Create launch — scope intake
 
-**`release-ticket` stays on the checklist** — always `[x]`, fixed, labeled **`auto on create`**. Not toggled by presets or user checkboxes. Always create `tasks/release-ticket.md` and **spawn it immediately** after scope confirm (files only, no Jira).
+`release-ticket` is **not** on the scope checklist — auto-runs after confirm (files only, no Jira).
 
-If the user did not specify other steps, show the scope-selection checklist with **`release-ticket` already `[x]`**. Offer presets for other steps:
+If the user did not specify steps, show **scope-selection checklist** (dependency order, `[ ]`/`[x]` checkboxes, no `release-ticket` row). Presets: **`taxonomy`** · **`minimal`** · **`implementation`** · **`all`**.
 
-> Presets: **`taxonomy`** · **`minimal`** · **`implementation`** · **`all`**
+**Accept scope replies:** preset name · step id list · *"all except …"* · pasted checklist with toggled `[ ]`/`[x]`.
 
-Do **not** default a full preset silently without showing the checklist.
+**Dependency warning:** if user selects a step but not its deps, list missing ids in one sentence and ask to add or confirm.
 
-**After scope confirm:** create tasks, auto-run `release-ticket`, merge `global_keys`, then show the **status checklist** with **`release-ticket` as `[x]` done · auto on create** and ask what to run next.
+Do **not** default a preset silently.
+
+**After scope confirm:** create tasks, auto-run `release-ticket`, merge `global_keys`, then **Short response** only — do **not** re-print the scope list or full checklist.
 
 ## Rules
 
@@ -143,7 +141,7 @@ Do **not** default a full preset silently without showing the checklist.
 5. Routing: `workflow.yaml` + task file `status` in YAML frontmatter (`pending` | `in_progress` | `done` | `blocked`).
 6. Task scaffolding from `workflow.yaml` — do not read all step SKILL.md at launch.
 7. Step identity: file `tasks/{step_id}.md` (filename = step id).
-8. **`release-ticket`:** always on checklist — **`[x]` fixed** on scope selection (**auto on create**); after auto-run show **`[x]` done · auto on create**. Always create task + spawn on new launch (files only, no Jira). Not toggled by presets. Taxonomy steps do not depend on it.
+8. **`release-ticket`:** auto on every create (files only, no Jira) — **not** on scope checklist. Always create task + spawn after scope confirm. Taxonomy steps do not depend on it.
 9. **Approval before spawn:** `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`. **`release-ticket`:** bundled into create-launch confirm — no separate gate when auto-running after create; confirm if re-run standalone.
 10. **Platform UI steps (`*-ui`):** default to **textual UI runbook** — no REST API until platform team documents one; record ids on task file after operator confirms live UI work.
 11. **`rlg-addition` / `oauth-db-update`:** platform DB steps — runbook/SQL today, not dist code.
@@ -229,7 +227,7 @@ When a spec file **exists**:
 3. **Scope checklist** — full dependency-ordered list; **`release-ticket` row fixed `[x]`**; presets pre-check other boxes.
 4. **Warn** if a checked step has unchecked / missing `depends_on` task files.
 5. **Create** `tasks/release-ticket.md` **always**, plus `tasks/{step_id}.md` for each checked step.
-6. **Auto-run `release-ticket`** — spawn child, merge `global_keys`; respond with folder path, **Setup block** (connector + release-ticket both **`[x]` done**), full step checklist, what's **ready now**.
+6. **Auto-run `release-ticket`** — spawn child, merge `global_keys`; **Short response** only (see **User interaction**).
 
 ## Resolve launch
 
@@ -241,7 +239,7 @@ User gives launch slug or display name → folder under `launches/`.
 2. Per step: `not_created` if no `tasks/{step_id}.md`; else read frontmatter `status`
 3. Ready = file exists, `status: pending`, all `depends_on` tasks are `done`
 4. **Resume:** steps with `status: in_progress` — report as resumable even when not "ready"
-5. **Always** present the dependency-ordered checklist and ask which step to work on (see **User interaction**).
+5. **Always** use **Short response** after step complete; full checklist only on explicit status request (see **User interaction**).
 
 ## Work on step `{step_id}`
 
@@ -250,7 +248,7 @@ User gives launch slug or display name → folder under `launches/`.
 3. Confirm before spawn: `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics` (`release-ticket` only if re-run standalone — not when auto-run after create launch)
 4. Spawn one child with launch path + task path
 5. Merge returned `global_keys` into `epic.md`
-6. Brief summary to user
+6. Brief summary to user — **Short response** format unless they asked for full status
 7. If the child renamed/removed harness files (skills, workflow, docs): run **end-of-iteration cleanup** (rule 13)
 
 ## Child spawn contract
