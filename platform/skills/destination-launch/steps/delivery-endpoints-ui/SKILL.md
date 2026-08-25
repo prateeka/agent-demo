@@ -24,6 +24,7 @@ Read `launches/{slug}/tasks/delivery-endpoints-ui.md`. If `## Details` is not th
 
 - `release.ticket_id`
 - `platform.rlg_id`
+- `platform.oauth_integration_id`
 - `properties.delivery`
 - `oauth.type`, `oauth.metadata_keys`
 - `thrift.streaming_endpoint_config`

@@ -73,9 +73,9 @@ After scaffolding, show created tasks + the numbered menu above; ask which step 
 6. Task scaffolding from `workflow.yaml` — do not read all step SKILL.md at launch.
 7. Step identity: file `tasks/{step_id}.md` (filename = step id).
 8. **Release ticket first:** `release-ticket` has no deps — run before other steps when tracking Jira/PRs against one release key.
-9. **Approval before spawn:** `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`.
+9. **Approval before spawn:** `release-ticket`, `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`.
 10. **Platform UI steps (`*-ui`):** default to **textual UI runbook** — no REST API until platform team documents one; record ids on task file after operator confirms live UI work.
-11. **`rlg-addition`:** platform DB insert for RLG — runbook/SQL today, not dist code.
+11. **`rlg-addition` / `oauth-db-update`:** platform DB steps — runbook/SQL today, not dist code.
 12. **PR linkage:** remind children that PR titles use `[{release.ticket_id}]` once `release.ticket_id` is in global context.
 13. **End-of-iteration cleanup (harness edits):** before finishing any turn that renames, removes, or splits steps/docs, delete redundant files and empty directories. Step folders must match `workflow.yaml` ids; remove stale step symlinks from `.cursor/skills/` and `.claude/skills/`; grep the repo for removed step ids and fix or delete dead references. Briefly note cleanup in the user summary when anything was removed.
 
@@ -138,7 +138,7 @@ User gives launch slug or display name → folder under `launches/`.
 
 1. Resolve launch folder + task file (create task if missing, user confirms)
 2. Warn if `depends_on` not `done`
-3. Confirm before spawn: `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`
+3. Confirm before spawn: `release-ticket`, `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`
 4. Spawn one child with launch path + task path
 5. Merge returned `global_keys` into `epic.md`
 6. Brief summary to user

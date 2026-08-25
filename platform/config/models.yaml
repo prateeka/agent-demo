@@ -16,7 +16,11 @@ steps:
     model: claude-4.6-sonnet-medium-thinking
   oauth:
     model: claude-4.6-sonnet-medium-thinking
-  taxonomy-deliverer:
+  oauth-db-update:
+    model: claude-4.6-sonnet-medium-thinking
+  taxonomy-connector-scaffold:
+    model: claude-4.6-sonnet-medium-thinking
+  taxonomy-partner-flow:
     model: claude-4.6-sonnet-medium-thinking
   partner-api-client:
     model: claude-4.6-sonnet-medium-thinking

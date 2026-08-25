@@ -147,7 +147,7 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 
 - **You never invoke step skills directly** — orchestrator spawns children.
 - **Release ticket first** when in the checklist — all Jira/PR titles reference it.
-- **Platform UI (`*-ui`) / RLG / Redpanda:** UI runbooks and YAML artifacts by default; live DB/UI/topic changes only if you explicitly ask.
+- **Platform UI (`*-ui`) / platform DB (RLG, OAuth) / Redpanda:** UI runbooks and YAML artifacts by default; live DB/UI/topic changes only if you explicitly ask.
 
 ---
 
@@ -155,11 +155,11 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 
 | Phase | What we did |
 |---|---|
-| **1. Workflow design** | Fifteen steps in `platform/workflow.yaml` — DAG, dependencies, human summaries for checklists |
+| **1. Workflow design** | Seventeen steps in `platform/workflow.yaml` — DAG, dependencies, human summaries for checklists |
 | **2. Agent architecture** | Thin **orchestrator** routes; **fat step skills** do the work; child agents keep context clean |
 | **3. Context model** | **Global** facts on `epic.md` (`## Global context` YAML); **local** detail on each `tasks/{step_id}.md` |
 | **4. Files-first demo** | `launches/` folder layout and `_template/` — **no Jira MCP required for hackathon** |
-| **5. Safety rules** | Confirm before release ticket, platform UI, RLG, and Redpanda steps; plan/runbook by default; one launch folder per destination |
+| **5. Safety rules** | Confirm before release ticket, platform DB (RLG, OAuth), platform UI, and Redpanda steps; plan/runbook by default; one launch folder per destination |
 
 **Not done yet (expected hackathon work):** deeper step skills, validators, Jira swap-in, full code scaffolding, learning loop / template versioning, QA smoke step, multi-env keys.
 
@@ -189,24 +189,26 @@ Details: `platform/docs/FILES-MODEL.md`.
 | `release-ticket` | Release ticket — **run first**; all Jira/PRs reference it | — |
 | `dist-types` | Thrift in `dist_types` | release-ticket |
 | `oauth` | OAuth client + endpoint config | dist-types |
-| `taxonomy-deliverer` | Taxonomy on destination (code in dist) | dist-types, oauth |
+| `oauth-db-update` | OAuth integration DB update | oauth |
+| `taxonomy-connector-scaffold` | Taxonomy connector scaffold (dist_types + dist) | dist-types, oauth |
+| `taxonomy-partner-flow` | Taxonomy partner flow (hooks + segment body) | taxonomy-connector-scaffold |
 | `partner-api-client` | Partner API client + constants | dist-types, oauth |
 | `request-builder-sender` | Request builder + sender | partner-api-client |
 | `transposer-record-handler` | Transposer, record handler, field selector, metrics | request-builder-sender |
 | `rlg-addition` | RLG DB addition | release-ticket |
-| `delivery-endpoints-ui` | Delivery endpoints via UI | rlg-addition, dist-types, oauth |
-| `taxonomy-ui` | Taxonomy endpoints via UI | taxonomy-deliverer |
+| `delivery-endpoints-ui` | Delivery endpoints via UI | rlg-addition, dist-types, oauth-db-update |
+| `taxonomy-ui` | Taxonomy endpoints via UI | taxonomy-connector-scaffold, taxonomy-partner-flow |
 | `ig-ui` | Integration group via UI | delivery-endpoints-ui, taxonomy-ui |
 | `da-ui` | Destination account via UI | ig-ui |
 | `redpanda-topics` | Redpanda topic creation + YAML artifact | transposer-record-handler |
-| `grafana-dashboards` | Dashboards and alerts | rlg-addition, transposer-record-handler, taxonomy-deliverer |
+| `grafana-dashboards` | Dashboards and alerts | rlg-addition, transposer-record-handler, taxonomy-partner-flow |
 | `tech-discovery` | Confluence draft for QA | grafana-dashboards, transposer-record-handler |
 
 **Presets:** `minimal` (release-ticket + dist-types + oauth), `implementation` (through redpanda-topics), `all`.
 
-**Platform naming:** `*-ui` = platform UI runbooks (API later). `rlg-addition` = DB insert for RLG. `taxonomy-deliverer` = destination taxonomy code (not `taxonomy-ui`).
+**Platform naming:** `*-ui` = platform UI runbooks (API later). `rlg-addition` / `oauth-db-update` = platform DB steps. **`taxonomy-connector-scaffold`** + **`taxonomy-partner-flow`** replace the old single taxonomy code step — scaffold writes Thrift/hook context; partner-flow writes `segment_body.*` for **`taxonomy-ui`**.
 
-**Platform UI order:** `rlg-addition` → `delivery-endpoints-ui`; `taxonomy-deliverer` → `taxonomy-ui`; then `ig-ui` (links endpoints + taxonomy) → `da-ui`.
+**Platform order:** `rlg-addition` → `delivery-endpoints-ui` (needs `oauth-db-update` after OAuth code); `taxonomy-connector-scaffold` → `taxonomy-partner-flow` → `taxonomy-ui`; then `ig-ui` (links endpoints + taxonomy) → `da-ui`.
 
 **Amazon DM reference launch** (RLG 1101) — planned; use `_template/` and create-new flow for now.
 

@@ -14,7 +14,7 @@ Create **taxonomy endpoint objects** via the **platform UI**.
 | **Today** | **UI runbook** — operator creates taxonomy endpoints in UI; ids on task file |
 | **Future** | REST API — update skill; **step id stays `taxonomy-ui`** |
 
-Requires **`taxonomy-deliverer`** (destination taxonomy code) to be done first.
+Requires **`taxonomy-connector-scaffold`** and **`taxonomy-partner-flow`** to be `done` first — UI forms render from both global context sets.
 
 Do **not** call a REST API until one is documented for this step.
 
@@ -24,10 +24,17 @@ Read `launches/{slug}/tasks/taxonomy-ui.md`. If `## Details` is not the stub sen
 
 ## Read first — exact global keys
 
+From **`taxonomy-connector-scaffold`** (endpoint/destination form):
+
 - `release.ticket_id`
-- `properties.taxonomy`
-- `thrift.taxonomy_config`
-- `grafana.metrics.taxonomy` (from taxonomy-deliverer, if set)
+- `taxonomy.connector.name`, `taxonomy.thrift.config_fields`
+- `taxonomy.tenant_id_field`, `taxonomy.hooks.ensure_account_scoped_generated`
+- `taxonomy.deliverer_fqcn`, `taxonomy.handler_fqcn`, `taxonomy.constants_fqcn`
+
+From **`taxonomy-partner-flow`** (per-segment form):
+
+- `segment_body.properties` (name, type, required, allowed_values, partner_field)
+- `segment_body.template`
 
 ## Ask the user
 

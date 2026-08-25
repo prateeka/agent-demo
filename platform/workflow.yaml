@@ -37,13 +37,31 @@ steps:
     depends_on: [dist-types]
     repos: [dist, dist_types]
 
-  - id: taxonomy-deliverer
-    skill: taxonomy-deliverer
-    jira_title: Taxonomy on destination (code)
+  - id: oauth-db-update
+    skill: oauth-db-update
+    jira_title: OAuth (DB update)
     summary: >-
-      Taxonomy deliverer code in dist — partner taxonomy API, sync flow, headers,
-      tests. This is the code step for taxonomy on the destination (not platform UI).
+      Add or update OAuth integration record in platform DB. Runbook/SQL today;
+      API when platform team ships it.
+    depends_on: [oauth]
+    repos: [agent-demo]
+
+  - id: taxonomy-connector-scaffold
+    skill: taxonomy-connector-scaffold
+    jira_title: Taxonomy connector scaffold
+    summary: >-
+      Scaffold API taxonomy connector in dist_types + dist — Thrift config, deliverer
+      skeleton, factory wiring, compile-clean hooks. Writes scaffold global context.
     depends_on: [dist-types, oauth]
+    repos: [dist, dist_types]
+
+  - id: taxonomy-partner-flow
+    skill: taxonomy-partner-flow
+    jira_title: Taxonomy partner flow
+    summary: >-
+      Partner resource chain in scaffold hooks; segment-body JSON contract and Gson
+      POJO. Reads scaffold global context; writes segment_body.* for taxonomy-ui.
+    depends_on: [taxonomy-connector-scaffold]
     repos: [dist, dist_types]
 
   - id: partner-api-client
@@ -88,7 +106,7 @@ steps:
     summary: >-
       Create delivery endpoints via platform UI. Textual runbook today; REST API
       when platform team ships it.
-    depends_on: [rlg-addition, dist-types, oauth]
+    depends_on: [rlg-addition, dist-types, oauth-db-update]
     repos: [agent-demo]
 
   - id: taxonomy-ui
@@ -97,7 +115,7 @@ steps:
     summary: >-
       Create taxonomy endpoint objects via platform UI. Textual runbook today;
       REST API when platform team ships it.
-    depends_on: [taxonomy-deliverer]
+    depends_on: [taxonomy-connector-scaffold, taxonomy-partner-flow]
     repos: [agent-demo]
 
   - id: ig-ui
@@ -132,7 +150,7 @@ steps:
     jira_title: Grafana dashboards and alerts
     summary: >-
       Dashboards and alerts — needs RLG id and metric names from prior steps.
-    depends_on: [rlg-addition, transposer-record-handler, taxonomy-deliverer]
+    depends_on: [rlg-addition, transposer-record-handler, taxonomy-partner-flow]
     repos: [agent-demo]
 
   - id: tech-discovery
@@ -148,7 +166,9 @@ presets:
     - release-ticket
     - dist-types
     - oauth
-    - taxonomy-deliverer
+    - oauth-db-update
+    - taxonomy-connector-scaffold
+    - taxonomy-partner-flow
     - partner-api-client
     - request-builder-sender
     - transposer-record-handler
@@ -164,7 +184,9 @@ presets:
     - release-ticket
     - dist-types
     - oauth
-    - taxonomy-deliverer
+    - oauth-db-update
+    - taxonomy-connector-scaffold
+    - taxonomy-partner-flow
     - partner-api-client
     - request-builder-sender
     - transposer-record-handler

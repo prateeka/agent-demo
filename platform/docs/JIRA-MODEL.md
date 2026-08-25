@@ -46,7 +46,7 @@
 
 ## Approval gates
 
-Explicit user confirm before spawning: `release-ticket`, `rlg-addition`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics` (files mode and Jira target).
+Explicit user confirm before spawning: `release-ticket`, `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics` (files mode and Jira target).
 
 ## PR convention
 
