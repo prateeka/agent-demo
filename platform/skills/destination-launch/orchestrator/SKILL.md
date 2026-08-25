@@ -38,32 +38,48 @@ Whenever the orchestrator shows workflow steps — **create launch**, **status**
 
 1. Load all steps from `platform/workflow.yaml` (`id`, `jira_title`, `summary`, `depends_on`).
 2. **Sort in dependency order:** topological sort on `depends_on` (every dependency before its dependents). **Tie-break:** order steps appear in `workflow.yaml`.
-3. Render **one markdown task-list line per step** (all steps — do not hide out-of-scope steps on status views).
+3. Render **one markdown task-list line per step** — **every** workflow step, always (never omit rows).
 
-**`release-ticket` on the list:** always shown as first row when it has no deps (or per topo order). **Not user-selectable** — runs automatically on every new launch. After auto-run, always render **`[x]` … **done** · auto on create**`. On scope selection (before create finishes), render **`[x]` … **auto on create**` (fixed checked, not toggled by presets).
-
-**Scope selection** (create launch — boxes = in this launch's checklist):
+**Setup block** (show after create launch and on status when relevant — always **include**, never skip):
 
 ```markdown
-Select steps for this launch (`release-ticket` runs automatically — always checked):
+Setup:
 
+- [x] Connector context — **done** · `amazon-dm-advertiser-spec.md`
+- [x] `release-ticket` — Release ticket (files only) — **done** · auto on create
+```
+
+- **Connector context:** always **`[x]` … **done**** once `epic.md` exists. Label **`· {spec-filename}`** when seeded from an existing `docs/connectors/*-spec.md`; else **`· slug {slug}`** (no error, no invented spec path).
+- **`release-ticket`:** **`[x]` … **done** · auto on create** after auto-run; **`[x]` … **auto on create**** on scope selection before run completes.
+
+**Scope selection** (create launch — boxes = selected for this launch):
+
+```markdown
+Setup:
+
+- [x] Connector context — **done** · `amazon-dm-advertiser-spec.md`
 - [x] `release-ticket` — Release ticket (files only) — **auto on create**
+
+Select steps for this launch:
+
 - [ ] `taxonomy-connector-scaffold` — Taxonomy connector scaffold
-- [ ] `taxonomy-partner-flow` — Taxonomy partner flow — depends on: taxonomy-connector-scaffold
-- [ ] `taxonomy-ui` — Taxonomy endpoints (UI) — depends on: taxonomy-connector-scaffold, taxonomy-partner-flow
-- [ ] `oauth` — OAuth client and endpoint config
+- [ ] `taxonomy-partner-flow` — Taxonomy partner flow · depends on: taxonomy-connector-scaffold
 …
 ```
 
-**Status / execute** (boxes = completed; annotate every line):
+**Status / execute** (every workflow step + setup block):
 
 ```markdown
+Setup:
+
+- [x] Connector context — **done** · slug `mac-apple`
+- [x] `release-ticket` — Release ticket (files only) — **done** · auto on create
+
 Launch checklist (dependency order):
 
-- [x] `release-ticket` — Release ticket (files only) — **done** · auto on create
 - [x] `taxonomy-connector-scaffold` — Taxonomy connector scaffold — **done**
 - [ ] `taxonomy-partner-flow` — Taxonomy partner flow — pending · **ready now**
-- [ ] `oauth` — OAuth client and endpoint config — not in scope
+- [ ] `oauth` — OAuth client and endpoint config — skipped
 …
 ```
 
@@ -71,15 +87,16 @@ Launch checklist (dependency order):
 
 | Mode | `[x]` means | `[ ]` means |
 |---|---|---|
-| Scope selection | User selected — create `tasks/{step_id}.md` | Not selected — no task file |
-| Status / execute | `status: done` | not done — show `pending`, `in_progress`, `not_created`, `blocked`, or `not in scope` |
-| **`release-ticket`** | Always **`[x]`** — not toggled | N/A — auto on create; show **`done · auto on create`** after run |
+| Setup / connector | Context seeded in `epic.md` — always show **done** once launch exists | N/A before create |
+| Scope selection | User selected — create `tasks/{step_id}.md` | Not selected — no task file yet |
+| Status / execute | `status: done` | not done — `pending`, `in_progress`, `not_created`, `blocked`, or **`skipped`** |
+| **`release-ticket`** | Always **`[x]`** after create | Before auto-run: **`[x]` auto on create** only |
 
-- Append **`· **ready now**`** when the step is in scope, `status: pending`, and every `depends_on` task is `done`.
+- Append **`· **ready now**`** when the step has a task file, `status: pending`, and every `depends_on` task is `done`.
 - Append **`· resumable`** when `status: in_progress`.
-- **`not in scope`** when no task file exists for a step that was not in the launch checklist (do not offer to run unless user adds it to scope).
-- Append **`· depends on: id1, id2`** only when `depends_on` is **non-empty** — omit entirely for root steps (no `depends on: —`).
-- When status is blocked/waiting, you may add **`· waiting on: id`** instead of or in addition to depends-on text.
+- **`skipped`** when no task file was created for this step (not selected at create) — **do not** use *not in scope*, *excluded*, or missing-spec error lines.
+- Append **`· depends on: id1, id2`** only when `depends_on` is **non-empty**.
+- When blocked/waiting, add **`· waiting on: id`**.
 
 **Presets** (`workflow.yaml` → `presets:`) pre-check scope boxes for **other** steps only — **`release-ticket` stays `[x]` fixed**. Presets: **`taxonomy`**, **`minimal`**, **`implementation`**, **`all`**.
 
@@ -178,7 +195,7 @@ Before mentioning any connector spec path:
 1. **List only files that exist** under `docs/connectors/` matching `*-spec.md` (read the directory — do not guess filenames from the user's launch name or slug).
 2. When offering a connector choice, show **only** discovered specs (slug + path that exists).
 3. **Never** display, suggest, or error with a constructed path like `docs/connectors/{slug}-spec.md` unless that file is present on disk.
-4. If the user's launch name has **no** matching spec file: seed `destination.slug` / `api_family` from what they asked for (slug; `api_family` = slug with `-` → `_`); say **no connector spec file in repo** — **do not** cite a non-existent path.
+4. If the user's launch name has **no** matching spec file: seed `destination.slug` / `api_family` from what they asked for (slug; `api_family` = slug with `-` → `_`); show **`[x] Connector context — **done** · slug {slug}`** in the Setup block — **never** error, block, or cite a non-existent spec path.
 
 **Example — only spec in repo today:**
 
@@ -212,7 +229,7 @@ When a spec file **exists**:
 3. **Scope checklist** — full dependency-ordered list; **`release-ticket` row fixed `[x]`**; presets pre-check other boxes.
 4. **Warn** if a checked step has unchecked / missing `depends_on` task files.
 5. **Create** `tasks/release-ticket.md` **always**, plus `tasks/{step_id}.md` for each checked step.
-6. **Auto-run `release-ticket`** — spawn child, merge `global_keys`; respond with folder path, **connector spec used (existing file only, or "none — manual slug")**, status checklist (**`release-ticket` shown done**), what's **ready now**.
+6. **Auto-run `release-ticket`** — spawn child, merge `global_keys`; respond with folder path, **Setup block** (connector + release-ticket both **`[x]` done**), full step checklist, what's **ready now**.
 
 ## Resolve launch
 

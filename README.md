@@ -116,11 +116,11 @@ The orchestrator spawns a **child agent** for step work — you stay in the orch
 
 ```bash
 ls launches/
-# e.g. launches/my-destination-api/epic.md
-ls launches/my-destination-api/tasks/
+# e.g. launches/amazon-dm-advertiser/epic.md
+ls launches/amazon-dm-advertiser/tasks/
 ```
 
-**Your launch will not show up in `git status` — that is intentional.** `.gitignore` excludes `launches/*` (except `_template/`) because active launches can contain internal URLs and partner detail. Nothing is broken; the files are on disk, just untracked.
+Launch folders live under **`launches/{slug}/`** (connector specs stay in **`docs/connectors/`** — not created per launch).
 
 ### Code repos (for implementation steps)
 
