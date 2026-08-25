@@ -24,7 +24,8 @@ Scaffolds a new **API-based taxonomy connector** across `dist_types` and `dist`.
 Read `launches/{slug}/epic.md` → `## Global context`:
 
 - `release.ticket_id` (optional — set manually on `epic.md` if tracking Jira/PRs)
-- `destination.slug`, `destination.api_family`
+- `destination.slug`, `destination.display_name`, `destination.api_family`
+- **Derive `{{Connector}}` from `destination.slug`** (PascalCase: `acme-dsp` → `AcmeDsp`), then `{{connector_snake}}`, `{{connectorCamel}}`, `{{CONNECTOR_UPPER}}` from it. **Do not ask the user for the connector name** — it is already in global context. Ask only if the slug is not a usable Java identifier.
 - `oauth.type`, `oauth.metadata_keys` (when oauth step done)
 - `thrift.oauth_endpoint_config` (when oauth step done)
 
@@ -57,52 +58,81 @@ preamble: |
 
 **`guidance` carries the skill's own selection help** — the kinds of values that belong on each side, plus real precedent. The orchestrator renders it verbatim and **never invents its own candidate field names**:
 
+Questions carrying `options` are **checklists of value kinds, not partner-specific field names** — the user ticks the kinds this partner needs and adds any the list misses. Emit `options` exactly as written; do not substitute another connector's field names.
+
 ```yaml
 user_questions:
-  - id: connector_name
-    prompt: "Connector name? (PascalCase, e.g. AcmeDsp)"
-    type: text
-    required: true
-    guidance: "Drives struct name, package, and class names."
   - id: dist_types_fields
     prompt: >-
       Which values are fixed for the whole destination account — identifying,
       routing, or naming the targets segments are shared with? These become
       Thrift fields in dist_types.
-    type: list
+    type: multi_select
     required: true
+    allow_multiple: true
+    options:
+      - id: oauth_integration_id
+        label: "OAuth integration id — include whenever the connector uses OAuth"
+      - id: account_id
+        label: "Account / seat / manager id — the tenant this endpoint delivers as"
+      - id: target_id
+        label: "Target id the segments are shared with (advertiser, instance)"
+      - id: region
+        label: "Region — routes to a base URL"
+      - id: country
+        label: "Country / marketplace"
+      - id: none_other
+        label: "None of these — I'll name the fields in chat"
     guidance: |
-      Kinds of values that qualify: advertiser / seat / manager account id,
-      instance id, region, country — anything constant across one sync().
-      Existing connectors carry one to three such fields; most include
-      oauth_integration_id when the connector authenticates via OAuth.
+      Anything constant across one sync() qualifies. Existing connectors carry
+      one to three such fields.
       Types: prefer string for ids (even numeric); enum for a closed set you
       control; list<string> for several targets — never a comma-separated
       string, and never a map<string,string> config bag.
-      These describe the shape of an answer, not a menu — name the values
-      this partner actually needs.
+      Tick the kinds that apply, then give the partner's actual field name for
+      each if it differs from the label.
   - id: dist_fields
     prompt: >-
       Which values live in dist? Java constants, lookups, OAuth metadata, and
       the per-segment keys of the create-segment request body.
-    type: list
+    type: multi_select
     required: true
+    allow_multiple: true
+    options:
+      - id: api_url_constant
+        label: "Base API URL as a Java constant (single-region partner)"
+      - id: region_lookup
+        label: "Region to base-URL lookup (multi-region partner)"
+      - id: derived_lookup
+        label: "Another derived lookup (e.g. country to marketplace id)"
+      - id: oauth_metadata
+        label: "OAuth handshake metadata (client id, tokens)"
+      - id: segment_name
+        label: "Segment body: name"
+      - id: segment_description
+        label: "Segment body: description"
+      - id: segment_other
+        label: "Segment body: other per-segment keys — I'll name them in chat"
     guidance: |
       Java constant: same for all customers of this partner (application ids,
       API paths, page sizes).
-      Java lookup: derivable from another field (region -> base URL,
-      country -> marketplace id).
-      OAuth metadata: returned by the handshake (client id, tokens).
-      Segment body: only what genuinely differs per segment (name,
-      description, retention flag). If the partner accepts the body verbatim,
-      no POJO is needed.
+      OAuth metadata: returned by the handshake.
+      Segment body: only what genuinely differs per segment. If the partner
+      accepts the body verbatim, no POJO is needed.
       Nothing batch-invariant belongs here. Account-level ids rendered into
       every segment body as comma-separated strings are a known anti-pattern
       in older connectors — do not copy it.
   - id: oauth
     prompt: "Does it use OAuth? If yes, which integration — new or existing?"
-    type: text
+    type: select
     required: true
+    options:
+      - id: existing
+        label: "Yes — existing OAuth integration"
+      - id: new
+        label: "Yes — new OAuth flow (adds an OAuthEndpointConfig struct)"
+      - id: none
+        label: "No OAuth"
     guidance: >-
       Yes adds oauth_integration_id and wires OAuthService.Iface. The value
       acting as the OAuth seat must be a required Thrift field.
@@ -110,15 +140,21 @@ user_questions:
     prompt: >-
       Does the partner require a container/parent resource to exist before
       segments can be created?
-    type: text
+    type: select
     required: true
+    options:
+      - id: "no"
+        label: "No — segments are created directly"
+      - id: "yes"
+        label: "Yes — a container must exist first (generates the batch-scoped hook)"
     guidance: >-
-      Some partners require a container resource (a parent audience, workspace
-      or similar) before any segment can be created; many require nothing.
-      Yes generates the batch-scoped hook; no omits it.
+      This is the one structural branch in the generated skeleton. Yes emits
+      ensureAccountScopedResources(), which runs once per sync and which
+      taxonomy-partner-flow then implements; no omits the method and its call
+      site entirely. It is recorded as taxonomy.hooks.ensure_account_scoped_generated.
 ```
 
-Do not add extra questions. Do not fill in example values as answers — guidance describes the shape of an answer, never a default. **Do not name another partner's connector as a suggestion.**
+Do not add extra questions — in particular, **do not ask for the connector name**; derive it from `destination.slug`. Do not fill in example values as answers — `options` are kinds to tick, never defaults. **Do not name another partner's connector as a suggestion.**
 
 ### `phase: execute`
 
@@ -153,7 +189,7 @@ Do **not** edit `epic.md`. Return every property in execution spec **Shared prop
 | `{{NEXT_TAG}}` | `taxonomy.thrift.next_tag` |
 | `{{NEXT_OAUTH_TAG}}` | `taxonomy.thrift.next_oauth_tag` |
 | Thrift config field list | `taxonomy.thrift.config_fields` |
-| Segment body keys (question 5) | `taxonomy.segment_body.keys` |
+| Segment body keys (from `dist_fields`) | `taxonomy.segment_body.keys` |
 | Batch-scoped hook generated? | `taxonomy.hooks.ensure_account_scoped_generated` |
 | Stored-override block generated? | `taxonomy.hooks.stored_override_generated` |
 | Deliverer FQCN | `taxonomy.deliverer_fqcn` |
@@ -204,7 +240,7 @@ assuming a list.
 
 The skill does four things, in order:
 
-1. **`phase: intake`** — return five questions (unanswered) so the orchestrator can ask the user which values belong in `dist_types` vs `dist`. Do not open those repos.
+1. **`phase: intake`** — return four questions (unanswered) so the orchestrator can ask the user which values belong in `dist_types` vs `dist`. Do not open those repos.
 2. **`phase: execute` only, after answers** — generate the `dist_types` struct + union tag on a **new branch**.
 3. Generate the shared `dist` boilerplate on a **new branch**: constants/lookup class, deliverer skeleton, `TaxonomyToolsFactory` case, `main()` test harness, unit test skeleton. Return the branch name.
 4. Print a checklist, and hand off the partner-specific API calls to `taxonomy-partner-flow` (see the last section).
@@ -236,16 +272,16 @@ Promote to global context:
 
 | Property | Example | Derived from |
 | --- | --- | --- |
-| `{{Connector}}` | `AcmeDsp` | question 1 |
+| `{{Connector}}` | `AcmeDsp` | `destination.slug` (PascalCase) — not asked |
 | `{{connector_snake}}` | `acme_dsp` | `{{Connector}}` |
 | `{{connectorCamel}}` | `acmeDsp` | `{{Connector}}` |
 | `{{CONNECTOR_UPPER}}` | `ACME_DSP` | `{{Connector}}` |
-| `{{tenant_id_field}}` / `{{tenantIdField}}` / `{{TENANT_UPPER}}` | `seat_id` / `seatId` / `SEAT_ID` | question 2 |
+| `{{tenant_id_field}}` / `{{tenantIdField}}` / `{{TENANT_UPPER}}` | `seat_id` / `seatId` / `SEAT_ID` | `dist_types_fields` |
 | `{{partner}}` | `acmedsp` | partner API hostname |
 | `{{NEXT_TAG}}`, `{{NEXT_OAUTH_TAG}}` | `53`, `13` | next free union tag at generation time |
-| Thrift config field list | `oauth_integration_id`, `seat_id`, `region` | questions 2–4 |
-| Segment body keys | `name`, `description` | question 5 |
-| Whether the batch-scoped hook was generated | `true` / `false` | question 4 |
+| Thrift config field list | `oauth_integration_id`, `seat_id`, `region` | `dist_types_fields` + `oauth` |
+| Segment body keys | `name`, `description` | `dist_fields` |
+| Whether the batch-scoped hook was generated | `true` / `false` | `parent_resource` |
 | Whether the stored-override block was generated | `true` / `false` | developer answer in 3b |
 | Deliverer FQCN | `com.liveramp.taxonomy_service.deliverer.acme_dsp.AcmeDspTaxonomyDeliverer` | derived |
 | Handler FQCN | `com.liveramp.partner_apis.clients.acme_dsp.AcmeDspApiServiceHandler` | derived |
@@ -269,7 +305,7 @@ checklist.
 
 ## Step 1 — The only rule the developer needs
 
-**Intake:** return this rule as `preamble` plus the five questions as `user_questions`. Do not answer them. Do not generate code.
+**Intake:** return this rule as `preamble` plus the four questions as `user_questions`. Do not answer them. Do not generate code.
 
 **Execute:** apply the user's answers. Do not re-ask.
 
@@ -305,15 +341,16 @@ Print this and nothing more elaborate (intake `preamble`):
 > The one real argument for the body is release cost: editing a template is a config change, while a new Thrift field is
 > a `dist_types` release plus a coordinated `dist` deploy. That is a one-time cost — pay it.
 
-Then ask **five questions** (no more):
+**Do not ask for the connector name** — derive `{{Connector}}` from `destination.slug` in global context.
 
-1. **Connector name?** (e.g. `AcmeDsp`) — drives struct name, package, class names.
-2. **Which values are fixed for the whole destination account — identifying, routing, or naming the targets segments are shared with?** (e.g. advertiser / seat / manager account id, instance id, region, country) — all of these become Thrift fields.
-3. **Does it use OAuth?** If yes, which OAuth integration — new or existing? (yes → adds `oauth_integration_id` and wires `OAuthService.Iface`)
-4. **Does the partner require a container/parent resource to exist before segments can be created?** (Some partners require a parent audience or workspace; many require nothing.) If yes → generate the batch-scoped hook in 3b; if no → omit it.
-5. **What varies per segment in the partner's create-segment request body?** The answer becomes the `segment_body_format`
+Then ask **four questions** (no more):
+
+1. **Which values are fixed for the whole destination account — identifying, routing, or naming the targets segments are shared with?** (e.g. account / seat / manager id, target id, region, country) — all of these become Thrift fields.
+2. **Which values live in `dist`?** Java constants, derived lookups, OAuth metadata, and what varies per segment in the partner's create-segment request body. The per-segment part becomes the `segment_body_format`
    template plus a Gson POJO. If the partner accepts the body verbatim, the deliverer can pass
    `get_resolved_segment_body()` straight through and no POJO is needed.
+3. **Does it use OAuth?** If yes, which OAuth integration — new or existing? (yes → adds `oauth_integration_id` and wires `OAuthService.Iface`)
+4. **Does the partner require a container/parent resource to exist before segments can be created?** (Some partners require a parent audience or workspace; many require nothing.) If yes → generate the batch-scoped hook in 3b; if no → omit it.
 
 Type guidance, stated briefly:
 
@@ -672,7 +709,7 @@ batch/file deliverers, which are out of scope here.
 ### 3d. Documented segment body
 
 Emit the `segment_body_format` template the endpoint config must use, built **only** from the values that differ per
-segment (question 5). Anything batch-invariant belongs in the Thrift struct, not here. Keep its keys in sync with
+segment (the segment-body part of `dist_fields`). Anything batch-invariant belongs in the Thrift struct, not here. Keep its keys in sync with
 `SegmentPayload`:
 
 ```json
