@@ -47,9 +47,9 @@ If `## Details` is filled, diff repo against recorded file paths before re-imple
 
 - Client compiles; constants and base URL wiring documented; unit tests for client setup pass
 
-## Amazon DM reference
+## Reference
 
-Amazon DM API client patterns in dist — constants, base URLs, auth headers.
+Existing partner API client patterns in `dist` — constants, base URLs, auth headers. Read a comparable connector in the repo rather than assuming one.
 
 ## Verification
 

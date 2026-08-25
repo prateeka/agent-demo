@@ -8,10 +8,9 @@ description: >-
 
 Draft a **Tech Discovery** Confluence page so QA can write the Integration QA Test Plan.
 
-## Template structure (Amazon DM)
+## Template structure
 
-- Tech Discovery example: https://liveramp.atlassian.net/wiki/spaces/Integratio/pages/5691998228/Amazon+Data+Manager+API
-- QA Test Plan example (downstream): https://liveramp.atlassian.net/wiki/spaces/CI/pages/5712118624/Amazon+Data+Manager+API+Integration+QA+TestPlan
+Follow the most recent published Tech Discovery page in the Integrations space, and its downstream Integration QA Test Plan, as the structural template. Ask the user for the link if none is in global context.
 
 Do **not** write the QA test plan — only the tech discovery document.
 

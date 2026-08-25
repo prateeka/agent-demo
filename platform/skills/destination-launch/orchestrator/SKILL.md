@@ -92,17 +92,37 @@ Which step should I run next? (`taxonomy-connector-scaffold` is **ready now**.) 
 
 - One line for launch path + in-scope step ids.
 - One line for setup if needed (`release-ticket` id / connector **done**).
+- If the child returned `repos.dist.branch` (or `repos.dist_types.branch`): print **`dist` branch: `{name}`** on its own line (required — user must see it).
 - **End with exactly:** *Which step should I run next? (`{ready_step_id}` is **ready now**.) To add steps to scope, name step ids.*
 - If multiple ready steps: *(`{id1}` or `{id2}` are **ready now**.)*
 - If none ready: say which deps are blocking in **one sentence** — still no full checklist.
 
 ### When to ask (do not guess or auto-pick)
 
-Ask **before** creating task files or spawning when the user:
+Ask **before** creating task files or spawning execute when the user:
 
 - Creates a launch **without** naming a preset or step list
 - Says vague continue intents: *"what's next?"*, *"status"*, *"continue"*, *"run a step"*, *"work on the launch"*, *"start"*
 - Names a launch but not a step
+- An intake child has returned `user_questions` — **relay those questions**; do not author replacements; do not spawn execute yet
+
+### Question relay (`intake: questions` in workflow.yaml)
+
+The orchestrator **does not know** what a step needs to ask. It does not list fields, invent questions, or special-case a skill. The **child** reads the step skill and returns questions; this chat only relays.
+
+**Children cannot talk to the user.** Questions asked only inside a child never reach the user.
+
+When the workflow step has `intake: questions` **and** the task file has no `## Answers (user-confirmed)`:
+
+1. **Need questions:** if `## Questions` is missing, spawn **one** child with `phase: intake`. `cwd` is **this repo** (`agent-demo`), not `dist`. Child writes `## Questions` on the task file and returns `user_questions` YAML. Child must **not** edit `dist` / `dist_types`, must **not** `git checkout` or create a branch in those repos.
+2. **Relay verbatim:** print the child's `preamble` first, then each question with its `guidance`. Use AskQuestion **only** when the child supplied `options`; otherwise a numbered list.
+
+   **Never invent options, example values, or candidate field names.** Suggestions come from the child's `guidance` or not at all — the orchestrator does not know this domain, and naming fields it half-remembers from another connector biases the answer toward the wrong partner. Do not add, drop, reword, or summarize prompts, `preamble`, or `guidance`.
+3. **End the turn after asking.** Never spawn `phase: execute` in the same turn as the questions.
+4. On the next user message, write `## Answers (user-confirmed)` on the task file (keys = question `id`s). If a required question is unanswered, ask again — do not guess.
+5. Spawn **`phase: execute`** with the answers pasted into the prompt.
+
+If intake returns `user_questions: []`, write `## Answers (user-confirmed)` as `(none)` and spawn execute (no user round-trip).
 
 ### Status / what's next response format
 
@@ -142,7 +162,7 @@ Do **not** default a preset silently.
 6. Task scaffolding from `workflow.yaml` — do not read all step SKILL.md at launch.
 7. Step identity: file `tasks/{step_id}.md` (filename = step id).
 8. **`release-ticket`:** auto on every create (files only, no Jira) — **not** on scope checklist. Always create task + spawn after scope confirm. Taxonomy steps do not depend on it.
-9. **Approval before spawn:** `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`. **`release-ticket`:** bundled into create-launch confirm — no separate gate when auto-running after create; confirm if re-run standalone.
+9. **Approval before spawn:** `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`. **`release-ticket`:** bundled into create-launch confirm — no separate gate when auto-running after create; confirm if re-run standalone. **Question relay** (above) is separate — it is not an approval list; it applies to any step with `intake: questions`.
 10. **Platform UI steps (`*-ui`):** default to **textual UI runbook** — no REST API until platform team documents one; record ids on task file after operator confirms live UI work.
 11. **`rlg-addition` / `oauth-db-update`:** platform DB steps — runbook/SQL today, not dist code.
 12. **PR linkage:** remind children that PR titles use `[{release.ticket_id}]` once `release.ticket_id` is in global context.
@@ -212,13 +232,14 @@ When a spec file **exists**:
 3. Copy other top-level spec keys only if defined in the spec and steps need them later (do not invent keys)
 4. User may override `display_name` in epic text only — do not re-interview for `api_family` or slug when the spec is authoritative
 
-**Ask the user only for epic narrative + connector choice (when multiple specs exist or name is ambiguous):**
+**Ask the user only for epic narrative + connector choice (when multiple specs exist or name is ambiguous).** Step-domain questions come from the **intake child**, not from this skill.
 
 | Ask | Goes to |
 |---|---|
 | Which connector? — **only from discovered `docs/connectors/*-spec.md` list** | resolves existing spec → global context |
 | Benefit, why now, scope (optional if user gives one epic paragraph) | `epic.md` → `## Summary` |
 | Step checklist (presets or checkboxes) | which `tasks/*.md` to create |
+| Questions returned by an intake child | `tasks/{step_id}.md` → `## Answers (user-confirmed)` |
 
 ## Create launch
 
@@ -246,10 +267,11 @@ User gives launch slug or display name → folder under `launches/`.
 1. Resolve launch folder + task file (create task if missing, user confirms)
 2. Warn if `depends_on` not `done`
 3. Confirm before spawn: `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics` (`release-ticket` only if re-run standalone — not when auto-run after create launch)
-4. Spawn one child with launch path + task path
-5. Merge returned `global_keys` into `epic.md`
-6. Brief summary to user — **Short response** format unless they asked for full status
-7. If the child renamed/removed harness files (skills, workflow, docs): run **end-of-iteration cleanup** (rule 13)
+4. If workflow has `intake: questions` and the task has no `## Answers (user-confirmed)`: run **Question relay** — intake spawn and/or ask the user; **do not** spawn execute while waiting on answers
+5. Spawn execute (one child) with launch path + task path + pasted answers when required
+6. Merge returned `global_keys` into `epic.md`
+7. Brief summary to user — **Short response** format unless they asked for full status. Print `repos.dist.branch` when the child returned it.
+8. If the child renamed/removed harness files (skills, workflow, docs): run **end-of-iteration cleanup** (rule 13)
 
 ## Child spawn contract
 
@@ -258,18 +280,32 @@ subagent_type: generalPurpose
 model: from models.yaml
 prompt: |
   Execute workflow step "{step_id}" for launch {slug}.
+  phase: intake | execute
 
   READ AND FOLLOW: platform/skills/destination-launch/steps/{skill}/SKILL.md
   Launch folder: launches/{slug}/
   Global context (read only): launches/{slug}/epic.md
   Step task (write local): launches/{slug}/tasks/{step_id}.md
 
-  Repo paths: run scripts/resolve-repos.sh (honors LAUNCHPAD_DIST / LAUNCHPAD_DIST_TYPES)
-
-  Return: status, global_keys YAML for orchestrator merge, blockers.
-
   release-ticket: files only — do NOT call Jira MCP or any issue tracker API.
-cwd: repo from workflow step (see repos.yaml)
+
+  phase=intake:
+    Return user_questions YAML. Write ## Questions on the task file.
+    Do NOT edit dist, dist_types, or other code repos.
+    Do NOT git checkout or create a branch in those repos.
+    Do NOT invent answers. Do NOT generate Thrift/Java.
+
+  phase=execute:
+    User answers are on the task file under ## Answers (user-confirmed)
+    and pasted below. If that block is missing, status=blocked and return
+    without touching code repos.
+    {paste ## Answers (user-confirmed)}
+    Then do the step work. If you create a git branch in dist, return
+    repos.dist.branch (and repos.dist_types.branch if applicable).
+
+  Return: status, user_questions (intake), global_keys (execute), blockers.
+intake cwd: agent-demo
+execute cwd: repo from workflow step (see repos.yaml)
 ```
 
 ## Status

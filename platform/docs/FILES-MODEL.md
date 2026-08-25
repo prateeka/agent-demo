@@ -43,6 +43,8 @@ Filled when this step is executed by a child agent.
 
 **Sentinel:** `## Details` stub line means not yet executed — child runs "Detect prior work."
 
+**Question relay** (`intake: questions` in `workflow.yaml`): intake child writes `## Questions`; orchestrator writes `## Answers (user-confirmed)` after the user replies; execute child reads answers. Orchestrator does not author the questions.
+
 ## Status mapping (files ↔ Jira)
 
 | Files `status` | Jira equivalent |
@@ -59,4 +61,4 @@ Filled when this step is executed by a child agent.
 
 ## Reference launch
 
-Planned: `launches/amazon-dm-reference/` (Amazon DM / RLG 1101). Use `_template/` until added.
+Planned: a reference launch folder seeded from a completed connector. Use `_template/` until added.

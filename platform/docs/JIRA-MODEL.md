@@ -48,6 +48,8 @@
 
 Explicit user confirm before spawning: `rlg-addition`, `oauth-db-update`, `delivery-endpoints-ui`, `taxonomy-ui`, `ig-ui`, `da-ui`, `redpanda-topics`. **`release-ticket`** auto-runs after create launch (files only); confirm only on standalone re-run.
 
+Steps with `intake: questions` in `workflow.yaml` run a **question relay**: intake child returns questions → user answers in the orchestrator chat → execute child. The orchestrator does not own the question list.
+
 ## PR convention
 
 `[{release.ticket_id}] description`

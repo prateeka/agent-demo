@@ -48,9 +48,9 @@ If `## Details` is filled, diff repo against recorded file paths before re-imple
 
 - Transposer wired; record handler integrated; metrics registered; tests pass
 
-## Amazon DM reference
+## Reference
 
-Amazon DM [1/4]–[4/4], `RelevantFieldSelectorFactory`, transposer wiring
+`RelevantFieldSelectorFactory` and transposer wiring in a comparable existing connector in `dist`.
 
 ## Verification
 

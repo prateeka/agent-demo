@@ -13,7 +13,7 @@ https://github.com/prateeka/agent-demo/blob/master/README.md
 | **Record layer today** | `launches/{slug}/` files (`epic.md` + `tasks/*.md`) |
 | **Record layer target** | Jira Epic + child issues (MCP) — same harness, swap later |
 | **Hackathon connector spec** | `docs/connectors/amazon-dm-advertiser-spec.md` |
-| **Reference launch** | `_template/` now; Amazon DM example **later** |
+| **Reference launch** | `_template/` now; a completed-connector example **later** |
 
 > **The harness does not need to be perfect** before the hackathon — we will fix gaps live. Feedback on direction and P0 demo blockers is welcome; polish is hackathon scope.
 
@@ -23,7 +23,7 @@ https://github.com/prateeka/agent-demo/blob/master/README.md
 
 Launching a new **OPI streaming destination** is **30+ manual steps** across code, Redpanda, deploys, ActFS, taxonomy, and backfill loops — mostly done from memory today.
 
-**LaunchPad** encodes the **Amazon Data Manager (RLG 1101)** launch as a **versioned template** so the next destination is faster:
+**LaunchPad** encodes a completed streaming-destination launch as a **versioned template** so the next destination is faster:
 
 | Capability | What it means |
 |---|---|
@@ -108,6 +108,7 @@ The orchestrator scaffolds `launches/{slug}/` from `launches/_template/`:
 
 - *"What's the status of my launch?"* — orchestrator shows all steps in **dependency order** with checkboxes (`[x]` = done, `[ ]` = pending / ready)
 - *"Run taxonomy-connector-scaffold"* or *"Start taxonomy preset"*
+- Steps with **`intake: questions`**: a child returns the questions; the orchestrator asks you those questions, then a second child runs with your answers (no `dist` edits before that)
 - On **create launch**, pick steps by checking boxes (presets **`taxonomy`** · **`minimal`** · **`implementation`** · **`all`** pre-fill them)
 
 The orchestrator spawns a **child agent** for step work — you stay in the orchestrator chat.
@@ -211,7 +212,7 @@ Details: `platform/docs/FILES-MODEL.md`.
 
 **Platform order:** `rlg-addition` → `delivery-endpoints-ui` (needs `oauth-db-update` after OAuth code); `taxonomy-connector-scaffold` → `taxonomy-partner-flow` → `taxonomy-ui`; then `ig-ui` (links endpoints + taxonomy) → `da-ui`.
 
-**Amazon DM reference launch** (RLG 1101) — planned; use `_template/` and create-new flow for now.
+**Reference launch** — planned; use `_template/` and create-new flow for now.
 
 ---
 
@@ -236,7 +237,7 @@ launches/
 | Path | Good for |
 |---|---|
 | **Create new launch** | Scaffold folder + checklist from `_template/` |
-| **Amazon DM reference** (later) | Mid-launch resume demo when we add `launches/amazon-dm-reference/` |
+| **Reference launch** (later) | Mid-launch resume demo when we add `launches/{reference-slug}/` |
 
 ---
 

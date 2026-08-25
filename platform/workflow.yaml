@@ -3,8 +3,11 @@
 # Record layer today: launches/{slug}/ (epic.md + tasks/*.md) — see FILES-MODEL.md
 # Record layer target: Jira Epic + child issues — see JIRA-MODEL.md
 #
-# Orchestrator reads: checklist, deps, jira_title, summary.
+# Orchestrator reads: checklist, deps, jira_title, summary, intake.
 # Child agents read step SKILL.md — NOT this file for domain work.
+# intake: questions — orchestrator spawns phase=intake first (child returns
+#   user_questions); relays to the user; then phase=execute with answers.
+#   Orchestrator does not author the questions.
 #
 # summary: human-facing precis for checklist — NOT the execution spec.
 #
@@ -30,6 +33,7 @@ steps:
       skeleton, factory wiring, compile-clean hooks. Writes scaffold global context.
     depends_on: []
     repos: [dist, dist_types]
+    intake: questions
 
   - id: taxonomy-partner-flow
     skill: taxonomy-partner-flow

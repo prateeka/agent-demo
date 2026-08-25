@@ -175,7 +175,7 @@ If any of these is missing from global context, stop and re-run `taxonomy-connec
 > - `lowerCamelCase`, matching the partner's JSON. Do not snake_case body keys — the body is partner-shaped, unlike
 >   Thrift which is `snake_case`.
 > - No prefixes: `name`, not `segmentName` or `{{connectorCamel}}Name`.
-> - No ids of things the account owns (advertiser, instance, seat, dataroom). Those are batch-invariant by definition.
+> - No ids of things the account owns (advertiser, instance, seat, container). Those are batch-invariant by definition.
 >
 > Type rules:
 >
@@ -183,7 +183,7 @@ If any of these is missing from global context, stop and re-run `taxonomy-connec
 >   token, including numeric ids.
 > - Use a real `boolean`/number only when the partner's API rejects the string form.
 > - Use a JSON **array** when the partner accepts several values for one segment. Never a comma-separated string —
->   that is the known Amazon DM defect (`advertiserAccountIds`), and there it should not be in the body at all.
+>   that is the known account-level-ids-in-the-body defect, and it should not be in the body at all.
 > - Required vs optional: required means the partner's create call fails without it. Optional values must be guarded
 >   with a blank check before being set on the request, not defaulted to `""`.
 
@@ -256,12 +256,10 @@ Print this model before generating:
 
 > Partner taxonomy setup is almost always a **chain of resources**, each depending on the previous one:
 >
-> | Partner | Account-scoped, once per sync | Per segment |
+> | Shape | Account-scoped, once per sync | Per segment |
 > | --- | --- | --- |
-> | Amazon DM | dataroom | dataset → DSP sharing rules → AMC sharing rules |
-> | LinkedIn | — | DMP segment |
-> | Pinterest | — | customer list (with name-fallback) |
-> | Google CM | — | user list |
+> | Container-first partners | a parent container (workspace, parent audience) | the segment plus its dependent resources (dataset, sharing rules) |
+> | Flat partners | — | a single segment-equivalent object (DMP segment, customer list, user list) |
 >
 > Split the chain by the same batch-invariance test used for config: a resource whose identity does not depend on the
 > segment goes in `ensureAccountScopedResources()`; everything else goes in `createOrVerifySegment(...)`.
@@ -278,7 +276,7 @@ Only if global context says the batch-scoped hook was generated. Replace the `Un
   private void ensureAccountScopedResources() throws Exception {
     LOG.info("Ensuring account-scoped resources: {{tenantIdField}}={}", {{tenantIdField}});
     // Prefer an idempotent create over exists-then-create: one call, no race between the two.
-    // Amazon DM does exactly this — POST dataroom returns 201 for both new and existing.
+    // Many partners return 201 for both new and existing on the container POST.
     apiService.createParentResourceIdempotent();
     LOG.info("Account-scoped resources ready: {{tenantIdField}}={}", {{tenantIdField}});
   }
@@ -322,8 +320,8 @@ Rules:
   }
 
   /**
-   * Ensures every resource that hangs off the segment (Amazon DM: sharing rules per advertiser and
-   * per AMC instance). Idempotent per resource: check existence, then create only what is missing.
+   * Ensures every resource that hangs off the segment (e.g. sharing rules per target account or
+   * instance). Idempotent per resource: check existence, then create only what is missing.
    *
    * TODO: implement per partner. Delete this method if the partner has no dependent resources.
    */
@@ -366,7 +364,7 @@ For each partner call above, add to `{{Connector}}ApiServiceHandler` (FQCN from 
 ```
 
 Generate one plain request class per partner call, in the handler's package, fields matching the partner's JSON, no
-logic. Closed-set values and application ids (Amazon DM's `DSP_AUDIENCES`, `AMAZON_MARKETING_CLOUD`) go in
+logic. Closed-set values and application ids (audience-type enums, product identifiers) go in
 `{{Connector}}Constants`, not inline.
 
 ### 2d. Test additions

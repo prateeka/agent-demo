@@ -28,16 +28,112 @@ Read `launches/{slug}/epic.md` → `## Global context`:
 - `oauth.type`, `oauth.metadata_keys` (when oauth step done)
 - `thrift.oauth_endpoint_config` (when oauth step done)
 
-## Ask the user
+## Phases (orchestrator relays; this skill owns the questions)
 
-**Do not invent questions here.** Use the **five questions** in execution spec **Step 1** (after the batch-invariance rule). Those drive Thrift fields, hook generation, and segment-body keys.
+The parent chat cannot see questions asked only inside a child. **Never answer Step 1 yourself. Never touch `dist` / `dist_types` until `phase: execute` with user answers.**
+
+### `phase: intake`
+
+1. Read execution spec **Step 1**. Turn those prompts (including which values belong in `dist_types` vs `dist`) into `user_questions` YAML — **unanswered**.
+2. Write them to the task file under `## Questions`, including each question's `guidance`.
+3. Return `preamble` + `user_questions` in the summary. `status` stays `pending`.
+4. **Stop.** Do not run `resolve-repos.sh`. Do not `git checkout`, create a branch, or edit Thrift/Java.
+
+**`preamble` is the Step 1 routing table, copied verbatim** — the orchestrator does not know this rule and must not summarize it:
+
+```yaml
+preamble: |
+  One question decides it: does this value differ between segments within a single sync?
+  If no, it belongs in dist_types (Thrift). If yes, it belongs in the segment body.
+
+  | If the value... | It goes in |
+  | --- | --- |
+  | is the same for every segment in the sync (account/seat/manager id, advertiser id, instance id, region, country) | dist_types Thrift field |
+  | genuinely differs per segment (segment name, description, retention flag) | segment body JSON (segment_body_format), parsed in dist |
+  | comes back from the OAuth handshake (client id, tokens, account metadata) | OAuth metadata, read in dist |
+  | is derivable from another field (region -> base URL, country -> marketplace id) | Java lookup in dist |
+  | is the same for all customers of this partner (application ids, API paths, page sizes) | Java constant in dist |
+```
+
+**`guidance` carries the skill's own selection help** — the kinds of values that belong on each side, plus real precedent. The orchestrator renders it verbatim and **never invents its own candidate field names**:
+
+```yaml
+user_questions:
+  - id: connector_name
+    prompt: "Connector name? (PascalCase, e.g. AcmeDsp)"
+    type: text
+    required: true
+    guidance: "Drives struct name, package, and class names."
+  - id: dist_types_fields
+    prompt: >-
+      Which values are fixed for the whole destination account — identifying,
+      routing, or naming the targets segments are shared with? These become
+      Thrift fields in dist_types.
+    type: list
+    required: true
+    guidance: |
+      Kinds of values that qualify: advertiser / seat / manager account id,
+      instance id, region, country — anything constant across one sync().
+      Existing connectors carry one to three such fields; most include
+      oauth_integration_id when the connector authenticates via OAuth.
+      Types: prefer string for ids (even numeric); enum for a closed set you
+      control; list<string> for several targets — never a comma-separated
+      string, and never a map<string,string> config bag.
+      These describe the shape of an answer, not a menu — name the values
+      this partner actually needs.
+  - id: dist_fields
+    prompt: >-
+      Which values live in dist? Java constants, lookups, OAuth metadata, and
+      the per-segment keys of the create-segment request body.
+    type: list
+    required: true
+    guidance: |
+      Java constant: same for all customers of this partner (application ids,
+      API paths, page sizes).
+      Java lookup: derivable from another field (region -> base URL,
+      country -> marketplace id).
+      OAuth metadata: returned by the handshake (client id, tokens).
+      Segment body: only what genuinely differs per segment (name,
+      description, retention flag). If the partner accepts the body verbatim,
+      no POJO is needed.
+      Nothing batch-invariant belongs here. Account-level ids rendered into
+      every segment body as comma-separated strings are a known anti-pattern
+      in older connectors — do not copy it.
+  - id: oauth
+    prompt: "Does it use OAuth? If yes, which integration — new or existing?"
+    type: text
+    required: true
+    guidance: >-
+      Yes adds oauth_integration_id and wires OAuthService.Iface. The value
+      acting as the OAuth seat must be a required Thrift field.
+  - id: parent_resource
+    prompt: >-
+      Does the partner require a container/parent resource to exist before
+      segments can be created?
+    type: text
+    required: true
+    guidance: >-
+      Some partners require a container resource (a parent audience, workspace
+      or similar) before any segment can be created; many require nothing.
+      Yes generates the batch-scoped hook; no omits it.
+```
+
+Do not add extra questions. Do not fill in example values as answers — guidance describes the shape of an answer, never a default. **Do not name another partner's connector as a suggestion.**
+
+### `phase: execute`
+
+1. Read `## Answers (user-confirmed)` on the task file (also pasted in the spawn prompt). If missing or incomplete → `status: blocked`, return, **do not** touch code repos.
+2. Use only those answers for Thrift fields, dist constants/lookups/body keys, OAuth, and hooks. **Do not invent or move fields.**
+3. Create a **new git branch** in `dist` (`LAUNCHPAD_DIST`, typically `~/code/liveramp/dist`): `release-{slug}/taxonomy-connector-scaffold`. Same name in `dist_types` for Thrift. Return `repos.dist.branch` (and `repos.dist_types.branch`) so the orchestrator can print the name.
+4. Then generate code (Steps 2–4).
 
 ## Write to step task (local)
 
 Update `launches/{slug}/tasks/taxonomy-connector-scaffold.md`:
 
-- Step 1 answers, generated file paths, compile output, Step 4 checklist results
-- Frontmatter `status`: `in_progress` while working; `done` when Definition of done met
+- **Intake:** `## Questions` only (unanswered). Leave `## Details` as the sentinel.
+- **Execute:** Step 1 answers, generated file paths, branch names, compile output, Step 4 checklist results
+- Frontmatter `status`: `pending` after intake; `in_progress` while generating; `done` when Definition of done met
 - PR link; PR title `[{release.ticket_id}] ...`
 
 ## Return global keys (orchestrator merges)
@@ -63,6 +159,8 @@ Do **not** edit `epic.md`. Return every property in execution spec **Shared prop
 | Deliverer FQCN | `taxonomy.deliverer_fqcn` |
 | Handler FQCN | `taxonomy.handler_fqcn` |
 | Constants FQCN | `taxonomy.constants_fqcn` |
+| dist git branch | `repos.dist.branch` |
+| dist_types git branch | `repos.dist_types.branch` |
 
 ```yaml
 global_keys:
@@ -74,9 +172,10 @@ global_keys:
 
 ## Definition of done
 
+- **Intake is not done.** `status: done` only after execute.
 - Execution spec **Step 4 — Final checklist** satisfied
 - `./gradlew :taxonomy_service:compileJava` clean from `java/`
-- Every row in the mapping table returned in `global_keys`
+- Every row in the mapping table returned in `global_keys` (including `repos.dist.branch`)
 
 ## Verification
 
@@ -97,21 +196,21 @@ emits. It depends on `taxonomy-connector-scaffold`; this skill depends on nothin
 
 Applies to **API-based taxonomy connectors for streaming destinations** — destinations that have (or will have) an integration under
 `java/s2s_data_syncer/src/main/java/com/liveramp/streaming_deliverer/handler/integration/`.
-Current members of this family with a taxonomy deliverer: `amazon_dm`, `criteo`, `doubleclick`, `facebook`,
-`google_customer_match`, `linkedin`, `pinterest`, `ttd`, `twitter`.
+Members of this family are the existing taxonomy deliverers under that package — read the directory rather than
+assuming a list.
 
 **Does not apply to** batch/file taxonomy deliverers (S3, SFTP, FTP, GCS, email, Netflix, IndexExchange). Those take
 `FileOperator` + `BatchDelivererService` and generate files instead of calling a segment-creation API — different skeleton entirely.
 
 The skill does four things, in order:
 
-1. Ask five questions to decide which values belong in `dist_types` (Thrift) vs. elsewhere.
-2. Generate the `dist_types` struct + union tag.
-3. Generate the shared `dist` boilerplate: constants/lookup class, deliverer skeleton, `TaxonomyToolsFactory` case, `main()` test harness, unit test skeleton.
+1. **`phase: intake`** — return five questions (unanswered) so the orchestrator can ask the user which values belong in `dist_types` vs `dist`. Do not open those repos.
+2. **`phase: execute` only, after answers** — generate the `dist_types` struct + union tag on a **new branch**.
+3. Generate the shared `dist` boilerplate on a **new branch**: constants/lookup class, deliverer skeleton, `TaxonomyToolsFactory` case, `main()` test harness, unit test skeleton. Return the branch name.
 4. Print a checklist, and hand off the partner-specific API calls to `taxonomy-partner-flow` (see the last section).
 
-**Out of scope (never generate):** the destination-specific API calls. For Amazon DM that is the dataroom / dataset /
-sharing-rule sequence; for Pinterest it is the customer-list name-fallback chain. The skill generates the sequencing,
+**Out of scope (never generate):** the destination-specific API calls — the partner's own resource sequence, whatever
+it is. The skill generates the sequencing,
 error accumulation and idempotency scaffolding around those calls, and leaves two hook methods for the developer to
 implement — one batch-scoped, one per-segment.
 
@@ -170,7 +269,11 @@ checklist.
 
 ## Step 1 — The only rule the developer needs
 
-Print this and nothing more elaborate:
+**Intake:** return this rule as `preamble` plus the five questions as `user_questions`. Do not answer them. Do not generate code.
+
+**Execute:** apply the user's answers. Do not re-ask.
+
+Print this and nothing more elaborate (intake `preamble`):
 
 > **One question decides it: does this value differ between segments within a single sync?**
 >
@@ -178,7 +281,7 @@ Print this and nothing more elaborate:
 >
 > | If the value... | It goes in |
 > | --- | --- |
-> | is the same for every segment in the sync (account/seat/manager id, advertiser id, AMC instance id, region, country) | **`dist_types` Thrift field** |
+> | is the same for every segment in the sync (account/seat/manager id, advertiser id, instance id, region, country) | **`dist_types` Thrift field** |
 > | genuinely differs per segment (segment name, description, retention flag) | **segment body JSON** (`segment_body_format`), parsed in `dist` |
 > | comes back from the OAuth handshake (client id, tokens, account metadata) | **OAuth metadata**, read in `dist` |
 > | is derivable from another field (region → base URL, country → marketplace id) | **Java lookup in `dist`** |
@@ -191,15 +294,13 @@ Print this and nothing more elaborate:
 > renders the same value into N identical payloads as an untyped string that gets re-parsed and re-validated on every
 > field. Thrift gives you one constructor-time validation and a real type.
 >
-> Existing examples: `NewLinkedInTaxonomyConfig` has one field (`oauth_integration_id`),
-> `PinterestTaxonomyConfig` has two (`advertiser_id`, `oauth_integration_id`), `AmazonDataManagerTaxonomyConfig` has
-> three (`oauth_integration_id`, `region`, `manager_account_id`).
+> Existing configs in this family carry roughly one to three fields — typically `oauth_integration_id` plus whichever
+> account/tenant id and routing value the partner requires.
 >
-> **Known deviation — do not copy it.** `AmazonDataManagerTaxonomyConfig` reads `advertiserAccountIds`,
-> `amcInstanceIds` and `countryCode` out of the segment body as comma-separated strings, even though all three are
-> constant per endpoint. By the rule above they should be Thrift fields (`list<string>` if multi-target support is
-> wanted). Treat this as debt to migrate, not a pattern. Only `name`, `description` and `idRetention` are legitimately
-> per-segment there.
+> **Known deviation — do not copy it.** Some older configs read account-level ids out of the segment body as
+> comma-separated strings even though they are constant per endpoint. By the rule above those should be Thrift fields
+> (`list<string>` if multi-target support is wanted). Treat this as debt to migrate, not a pattern. Only genuinely
+> per-segment values (name, description, retention flag) belong in the body.
 >
 > The one real argument for the body is release cost: editing a template is a config change, while a new Thrift field is
 > a `dist_types` release plus a coordinated `dist` deploy. That is a one-time cost — pay it.
@@ -209,10 +310,10 @@ Then ask **five questions** (no more):
 1. **Connector name?** (e.g. `AcmeDsp`) — drives struct name, package, class names.
 2. **Which values are fixed for the whole destination account — identifying, routing, or naming the targets segments are shared with?** (e.g. advertiser / seat / manager account id, instance id, region, country) — all of these become Thrift fields.
 3. **Does it use OAuth?** If yes, which OAuth integration — new or existing? (yes → adds `oauth_integration_id` and wires `OAuthService.Iface`)
-4. **Does the partner require a container/parent resource to exist before segments can be created?** (Amazon DM: a dataroom. LinkedIn, Pinterest: nothing.) If yes → generate the batch-scoped hook in 3b; if no → omit it.
+4. **Does the partner require a container/parent resource to exist before segments can be created?** (Some partners require a parent audience or workspace; many require nothing.) If yes → generate the batch-scoped hook in 3b; if no → omit it.
 5. **What varies per segment in the partner's create-segment request body?** The answer becomes the `segment_body_format`
    template plus a Gson POJO. If the partner accepts the body verbatim, the deliverer can pass
-   `get_resolved_segment_body()` straight through (see `NewLinkedInTaxonomyDeliverer`) and no POJO is needed.
+   `get_resolved_segment_body()` straight through and no POJO is needed.
 
 Type guidance, stated briefly:
 
@@ -228,6 +329,8 @@ Field numbering: append the next unused number in the struct; append the next un
 ---
 
 ## Step 2 — Generate `dist_types`
+
+**Execute only.** If `## Answers (user-confirmed)` is missing, stop (`blocked`).
 
 File: `dist_types/src/main/thrift/taxonomy_service.thrift`
 
@@ -267,6 +370,8 @@ OAuth seat and the taxonomy tenant id disagree, the connector authenticates as t
 ---
 
 ## Step 3 — Generate `dist` boilerplate
+
+**Execute only.** Create/use the new branch in `dist` first; return its name.
 
 ### 3a. Constants + lookups
 
@@ -318,9 +423,9 @@ the partner, record `set_override(...)` on success and `set_failure_message(...)
 `TaxonomyUtils.buildTaxonomyExchangeResult`.
 
 There are exactly two hooks. `ensureAccountScopedResources()` runs once per sync and takes no per-segment argument —
-everything it needs is a Thrift config field by the Step 1 rule. `createOrVerifySegment(...)` runs per field. Amazon
-DM's dataroom fits the first; its dataset and sharing rules fit the second. Connectors with no parent resource leave the
-first hook out entirely.
+everything it needs is a Thrift config field by the Step 1 rule. `createOrVerifySegment(...)` runs per field. A
+partner's account-level container fits the first; its per-segment resources fit the second. Connectors with no parent
+resource leave the first hook out entirely.
 
 ```java
 package com.liveramp.taxonomy_service.deliverer.{{connector_snake}};
@@ -455,7 +560,7 @@ public class {{Connector}}TaxonomyDeliverer implements TaxonomyDeliverer {
 
   /**
    * Ensures the account-scoped parent resource the partner requires before any segment can be
-   * created (Amazon DM: the dataroom). Runs once per sync, not once per field. Takes no arguments:
+   * created. Runs once per sync, not once per field. Takes no arguments:
    * everything it needs is a Thrift config field.
    *
    * TODO: implement, or delete this method and its call site if the partner has no such resource.
@@ -514,14 +619,14 @@ public class {{Connector}}TaxonomyDeliverer implements TaxonomyDeliverer {
 ```
 
 **Optional block — only generate when the developer says repeat syncs must reuse an existing platform id.**
-Amazon DM does this; Pinterest and LinkedIn do not. Add the helper as a class member, and insert the loop fragment
+Only some partners need this. Add the helper as a class member, and insert the loop fragment
 immediately *after* the `fieldContext` assignment and *before* the `try` — it reads `fieldContext`, so placing it above
 that line will not compile.
 
 If **both** this block and the batch-scoped hook are generated, the stored-id check must come first: a field that
 already has a platform id needs no parent resource, so it should succeed even when `ensureAccountScopedResources()`
 failed. Guard the setup call with `fields.stream().anyMatch(f -> StringUtils.isEmpty(getStoredSegmentId(f)))` and move
-the `setupFailure` check below the stored-id short-circuit. This is what Amazon DM does.
+the `setupFailure` check below the stored-id short-circuit.
 
 ```java
   private static final String OVERRIDE_ID_PROPERTY = "platform_integration_segment_id";
@@ -623,8 +728,8 @@ Generate tests for the boilerplate only, using the package-private constructor w
 > `taxonomy-partner-flow` must not run before this skill has produced the Thrift struct, the deliverer skeleton and the factory
 > wiring, and must not be invoked to "fix up" or restructure that output.
 
-The partner-specific resource chain (Amazon DM's dataroom → dataset → sharing rules, Google's audience list, LinkedIn's
-DMP segment) belongs in `taxonomy-partner-flow`, one invocation per partner or one parameterized by partner API docs.
+The partner-specific resource chain — whatever sequence of container, dataset, audience or sharing-rule calls the
+partner requires — belongs in `taxonomy-partner-flow`, one invocation per partner or one parameterized by partner API docs.
 `taxonomy-connector-scaffold` owns the contract; `taxonomy-partner-flow` fills in the two hooks.
 
 **Contract `taxonomy-partner-flow` must honor** — fixed here, not negotiable downstream:
@@ -653,6 +758,6 @@ threading an extra parameter through the hooks.
 - A `map<string,string>` or JSON-encoded blob in the Thrift config.
 - More than one field that identifies the tenant, with no rule for which one wins.
 - A token fetch inside the per-field loop.
-- An endpoint-level constant rendered into every segment body (the Amazon DM `advertiserAccountIds` mistake) → Thrift field.
+- An endpoint-level constant rendered into every segment body (account-level ids as comma-separated strings) → Thrift field.
 - A comma-separated string in the segment body standing in for a list → `list<string>` Thrift field.
 - The batch-scoped hook called from inside the per-field loop.

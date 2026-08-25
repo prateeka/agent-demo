@@ -46,9 +46,9 @@ Return only keys listed above unless the user explicitly asks to add more to glo
 
 - Request builder/sender tests pass; send path wired to partner API client
 
-## Amazon DM reference
+## Reference
 
-`AmazonDMRequestBuilder`, `AmazonDMRequestSender`
+`{{Connector}}RequestBuilder` / `{{Connector}}RequestSender` — follow the builder/sender pair of a comparable existing connector in `dist`.
 
 ## Verification
 

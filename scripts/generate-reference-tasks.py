@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Generate task files for a reference launch folder (e.g. amazon-dm-reference).
+"""Generate task files for a reference launch folder.
 
 Usage (when reference launch is added):
-  python3 scripts/generate-reference-tasks.py --slug amazon-dm-reference --display "Amazon Data Manager API"
+  python3 scripts/generate-reference-tasks.py --slug my-reference --display "My Destination API"
 
 Not used until a reference launch folder exists under launches/.
 """
 from pathlib import Path
 import argparse
 
-DISPLAY_DEFAULT = "Amazon Data Manager API"
-SLUG_DEFAULT = "amazon-dm-reference"
+DISPLAY_DEFAULT = "Reference Destination API"
+SLUG_DEFAULT = "reference-launch"
 
 # status per step for a mid-launch demo snapshot
 STATUSES = {

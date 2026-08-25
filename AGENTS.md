@@ -14,7 +14,8 @@ See [README.md](README.md) and [platform/docs/FILES-MODEL.md](platform/docs/FILE
 - **Workflow:** `platform/workflow.yaml`
 - **Global context:** children return `global_keys` YAML; orchestrator merges into `epic.md` (no key registry file yet)
 - **Spawn child agents** for step work; never execute steps inline in orchestrator chat
-- **Code repos:** set `LAUNCHPAD_DIST` / `LAUNCHPAD_DIST_TYPES` before implementation steps — see `platform/config/repos.yaml`
+- **Question relay:** if `workflow.yaml` has `intake: questions`, spawn `phase: intake` first (questions only — no `dist`); relay `user_questions` to the user; spawn `phase: execute` with `## Answers (user-confirmed)`. Do not author step questions in the orchestrator skill.
+- **Code repos:** set `LAUNCHPAD_DIST` / `LAUNCHPAD_DIST_TYPES` before **execute** (not intake) — see `platform/config/repos.yaml`
 - **End-of-iteration cleanup:** after skill/workflow/doc edits, delete redundant files and empty folders before finishing — step dirs under `platform/skills/destination-launch/steps/` must match `platform/workflow.yaml` ids only; `.cursor/skills/` and `.claude/skills/` must symlink orchestrator only (run `./scripts/link-skills.sh` if needed); grep for stale step ids and remove dead references
 
 ## Sibling repos
