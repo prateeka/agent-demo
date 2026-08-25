@@ -1,4 +1,5 @@
 # Default model per workflow step. Orchestrator passes to Task child agents.
+# All step executions use composer-2.5 unless a step entry overrides (none today).
 
 defaults:
   model: composer-2.5
@@ -6,44 +7,8 @@ defaults:
 
 orchestrator:
   model: composer-2.5
-  thinking: low
+  thinking: medium
 
-steps:
-  release-ticket:
-    model: composer-2.5
-    thinking: low
-  dist-types:
-    model: claude-4.6-sonnet-medium-thinking
-  oauth:
-    model: claude-4.6-sonnet-medium-thinking
-  oauth-db-update:
-    model: claude-4.6-sonnet-medium-thinking
-  taxonomy-connector-scaffold:
-    model: claude-4.6-sonnet-medium-thinking
-  taxonomy-partner-flow:
-    model: claude-4.6-sonnet-medium-thinking
-  partner-api-client:
-    model: claude-4.6-sonnet-medium-thinking
-  request-builder-sender:
-    model: claude-4.6-sonnet-medium-thinking
-  transposer-record-handler:
-    model: claude-4.6-sonnet-medium-thinking
-  rlg-addition:
-    model: claude-4.6-sonnet-medium-thinking
-  delivery-endpoints-ui:
-    model: claude-4.6-sonnet-medium-thinking
-  taxonomy-ui:
-    model: claude-4.6-sonnet-medium-thinking
-  ig-ui:
-    model: claude-4.6-sonnet-medium-thinking
-  da-ui:
-    model: claude-4.6-sonnet-medium-thinking
-  redpanda-topics:
-    model: composer-2.5
-    thinking: medium
-  tech-discovery:
-    model: composer-2.5
-    thinking: medium
-  grafana-dashboards:
-    model: composer-2.5
-    thinking: medium
+# Step child agents inherit defaults (composer-2.5). Add per-step entries only to override.
+
+steps: {}

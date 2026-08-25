@@ -7,43 +7,19 @@
 # Child agents read step SKILL.md — NOT this file for domain work.
 #
 # summary: human-facing precis for checklist — NOT the execution spec.
-version: 2
+#
+# Display order: topological sort on depends_on; tie-break = order below.
+# release-ticket: auto on every create (orchestrator) — not in presets/checklists.
+version: 3
 
 steps:
   - id: release-ticket
     skill: release-ticket
     jira_title: Release ticket
     summary: >-
-      Create the Release ticket first. All step Jira tickets and PR titles reference
-      release.ticket_id from global context.
+      Record Release ticket id for the launch (files only — no Jira API). All step
+      tickets and PR titles reference release.ticket_id from global context.
     depends_on: []
-    repos: [agent-demo]
-
-  - id: dist-types
-    skill: dist-types
-    jira_title: Dist types (Thrift schemas)
-    summary: >-
-      Add dist_types Thrift definitions — streaming format, endpoint config,
-      taxonomy config, OAuth endpoint union. Bump codegen per repo convention.
-    depends_on: [release-ticket]
-    repos: [dist_types]
-
-  - id: oauth
-    skill: oauth
-    jira_title: OAuth client and endpoint config
-    summary: >-
-      Implement OAuth in dist + dist_types — token URL, headers, metadata keys,
-      client implementation, validation.
-    depends_on: [dist-types]
-    repos: [dist, dist_types]
-
-  - id: oauth-db-update
-    skill: oauth-db-update
-    jira_title: OAuth (DB update)
-    summary: >-
-      Add or update OAuth integration record in platform DB. Runbook/SQL today;
-      API when platform team ships it.
-    depends_on: [oauth]
     repos: [agent-demo]
 
   - id: taxonomy-connector-scaffold
@@ -52,7 +28,7 @@ steps:
     summary: >-
       Scaffold API taxonomy connector in dist_types + dist — Thrift config, deliverer
       skeleton, factory wiring, compile-clean hooks. Writes scaffold global context.
-    depends_on: [dist-types, oauth]
+    depends_on: []
     repos: [dist, dist_types]
 
   - id: taxonomy-partner-flow
@@ -64,13 +40,31 @@ steps:
     depends_on: [taxonomy-connector-scaffold]
     repos: [dist, dist_types]
 
+  - id: taxonomy-ui
+    skill: taxonomy-ui
+    jira_title: Taxonomy endpoints (UI)
+    summary: >-
+      Create taxonomy endpoint objects via platform UI. Textual runbook today;
+      REST API when platform team ships it.
+    depends_on: [taxonomy-connector-scaffold, taxonomy-partner-flow]
+    repos: [agent-demo]
+
+  - id: rlg-addition
+    skill: rlg-addition
+    jira_title: RLG (DB addition)
+    summary: >-
+      Add RLG record in platform DB. Runbook/SQL today; API when platform team
+      ships it.
+    depends_on: [release-ticket]
+    repos: [agent-demo]
+
   - id: partner-api-client
     skill: partner-api-client
     jira_title: Partner API client
     summary: >-
       Partner API client and constants in dist — base URLs, auth wiring,
       shared client utilities for streaming delivery.
-    depends_on: [dist-types, oauth]
+    depends_on: [oauth]
     repos: [dist, dist_types]
 
   - id: request-builder-sender
@@ -91,13 +85,31 @@ steps:
     depends_on: [request-builder-sender]
     repos: [dist, dist_types]
 
-  - id: rlg-addition
-    skill: rlg-addition
-    jira_title: RLG (DB addition)
+  - id: redpanda-topics
+    skill: redpanda-topics
+    jira_title: Redpanda topics
     summary: >-
-      Add RLG record in platform DB. Runbook/SQL today; API when platform team
-      ships it.
-    depends_on: [release-ticket]
+      Topic design; emit artifacts/redpanda-topics.yaml. Live topic creation
+      only if user explicitly asks.
+    depends_on: [transposer-record-handler]
+    repos: [agent-demo]
+
+  - id: oauth
+    skill: oauth
+    jira_title: OAuth client and endpoint config
+    summary: >-
+      Implement OAuth in dist + dist_types — token URL, headers, metadata keys,
+      client implementation, validation.
+    depends_on: []
+    repos: [dist, dist_types]
+
+  - id: oauth-db-update
+    skill: oauth-db-update
+    jira_title: OAuth (DB update)
+    summary: >-
+      Add or update OAuth integration record in platform DB. Runbook/SQL today;
+      API when platform team ships it.
+    depends_on: [oauth]
     repos: [agent-demo]
 
   - id: delivery-endpoints-ui
@@ -106,16 +118,7 @@ steps:
     summary: >-
       Create delivery endpoints via platform UI. Textual runbook today; REST API
       when platform team ships it.
-    depends_on: [rlg-addition, dist-types, oauth-db-update]
-    repos: [agent-demo]
-
-  - id: taxonomy-ui
-    skill: taxonomy-ui
-    jira_title: Taxonomy endpoints (UI)
-    summary: >-
-      Create taxonomy endpoint objects via platform UI. Textual runbook today;
-      REST API when platform team ships it.
-    depends_on: [taxonomy-connector-scaffold, taxonomy-partner-flow]
+    depends_on: [rlg-addition, oauth-db-update]
     repos: [agent-demo]
 
   - id: ig-ui
@@ -136,15 +139,6 @@ steps:
     depends_on: [ig-ui]
     repos: [agent-demo]
 
-  - id: redpanda-topics
-    skill: redpanda-topics
-    jira_title: Redpanda topics
-    summary: >-
-      Topic design; emit artifacts/redpanda-topics.yaml. Live topic creation
-      only if user explicitly asks.
-    depends_on: [transposer-record-handler]
-    repos: [agent-demo]
-
   - id: grafana-dashboards
     skill: grafana-dashboards
     jira_title: Grafana dashboards and alerts
@@ -162,31 +156,31 @@ steps:
     repos: [agent-demo]
 
 presets:
-  all:
-    - release-ticket
-    - dist-types
-    - oauth
-    - oauth-db-update
+  taxonomy:
     - taxonomy-connector-scaffold
     - taxonomy-partner-flow
+    - taxonomy-ui
+  all:
+    - taxonomy-connector-scaffold
+    - taxonomy-partner-flow
+    - taxonomy-ui
+    - rlg-addition
+    - oauth
+    - oauth-db-update
     - partner-api-client
     - request-builder-sender
     - transposer-record-handler
-    - rlg-addition
     - delivery-endpoints-ui
-    - taxonomy-ui
     - ig-ui
     - da-ui
     - redpanda-topics
     - grafana-dashboards
     - tech-discovery
   implementation:
-    - release-ticket
-    - dist-types
-    - oauth
-    - oauth-db-update
     - taxonomy-connector-scaffold
     - taxonomy-partner-flow
+    - oauth
+    - oauth-db-update
     - partner-api-client
     - request-builder-sender
     - transposer-record-handler
@@ -197,6 +191,5 @@ presets:
     - da-ui
     - redpanda-topics
   minimal:
-    - release-ticket
-    - dist-types
-    - oauth
+    - taxonomy-connector-scaffold
+    - taxonomy-partner-flow

@@ -18,8 +18,8 @@ launches/{slug}/
 ## epic.md
 
 - Title line: `# Launch: {display_name}`
-- `## Summary` — business benefit, why now
-- `## Global context` — fenced YAML block; orchestrator merges child `global_keys` here
+- `## Summary` — business benefit, why now, scope (user/epic narrative at create time)
+- `## Global context` — fenced YAML block; orchestrator **seeds** `destination.*` from an **existing** `docs/connectors/*-spec.md` when one matches; otherwise manual slug/`api_family` with **no invented spec path**; later merges child `global_keys` here
 
 ## tasks/{step-id}.md
 
@@ -34,7 +34,8 @@ title: "OAuth client and endpoint config: {display_name}"
 {from workflow.yaml summary at creation}
 
 ## Depends on
-dist-types
+
+taxonomy-connector-scaffold
 
 ## Details
 Filled when this step is executed by a child agent.

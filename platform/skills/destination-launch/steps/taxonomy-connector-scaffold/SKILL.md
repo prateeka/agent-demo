@@ -23,11 +23,10 @@ Scaffolds a new **API-based taxonomy connector** across `dist_types` and `dist`.
 
 Read `launches/{slug}/epic.md` → `## Global context`:
 
-- `release.ticket_id`
+- `release.ticket_id` (optional — set manually on `epic.md` if tracking Jira/PRs)
 - `destination.slug`, `destination.api_family`
-- `oauth.type`, `oauth.metadata_keys`
-- `thrift.oauth_endpoint_config`
-- `thrift.taxonomy_config` (if set by `dist-types`)
+- `oauth.type`, `oauth.metadata_keys` (when oauth step done)
+- `thrift.oauth_endpoint_config` (when oauth step done)
 
 ## Ask the user
 

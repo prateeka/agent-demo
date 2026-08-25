@@ -7,6 +7,7 @@
 ## Global context
 
 ```yaml
+# destination.* seeded from docs/connectors/{slug}-spec.md Summary block — not user-interviewed
 destination:
   slug: {slug}
   display_name: {display_name}

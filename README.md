@@ -42,7 +42,7 @@ This repo is the **initial agent harness** — orchestrator + workflow + step sk
 
 - **Cursor** (or Claude Code) recent enough to support **Agent Skills** — this repo is driven entirely from a chat window; there is no app or CLI to install.
 - **GitHub access** to `prateeka/agent-demo`. If `git clone` fails with a permission error, ask for access rather than assuming the repo is broken.
-- Implementation steps (`dist-types`, `oauth`, etc.) need local **`dist`** and **`dist_types`** checkouts — set env vars before running those steps.
+- Implementation steps (`oauth`, streaming stack, taxonomy code, etc.) need local **`dist`** and **`dist_types`** checkouts — set env vars before running those steps.
 
 ### 1. Clone and open
 
@@ -85,14 +85,16 @@ Use the IDE skill picker — **not** the terminal:
 - **Cursor:** new chat → pick skill **destination-launch-orchestrator**
 - **Claude Code:** same skill name (linked under `.claude/skills/`)
 
-Then type your prompt in chat (e.g. *"Create a new launch for MyDestination API"*).
+Then type your prompt in chat (e.g. *"Create a launch for amazon-dm-advertiser"*).
 
 ### 4. Create a launch
 
 Example prompts:
 
-- *"Create a new launch for MyDestination API"*
-- *"Create a launch for TestPartner — api family streaming"*
+- *"Create a launch for amazon-dm-advertiser"* — orchestrator reads `docs/connectors/amazon-dm-advertiser-spec.md`
+- *"Create a launch using docs/connectors/amazon-dm-advertiser-spec.md"*
+
+**Intake:** connector spec + epic narrative. **`release-ticket` appears on the checklist as done** after create (auto-run, files only). Pick other steps via checkboxes or presets (`taxonomy`, `minimal`, …).
 
 The orchestrator scaffolds `launches/{slug}/` from `launches/_template/`:
 
@@ -104,9 +106,9 @@ The orchestrator scaffolds `launches/{slug}/` from `launches/_template/`:
 
 ### 5. Run a step (optional)
 
-- *"What's the status of my launch?"*
-- *"Run the dist-types step"* or *"Start minimal preset"*
-- *"Show me the checklist"*
+- *"What's the status of my launch?"* — orchestrator shows all steps in **dependency order** with checkboxes (`[x]` = done, `[ ]` = pending / ready)
+- *"Run taxonomy-connector-scaffold"* or *"Start taxonomy preset"*
+- On **create launch**, pick steps by checking boxes (presets **`taxonomy`** · **`minimal`** · **`implementation`** · **`all`** pre-fill them)
 
 The orchestrator spawns a **child agent** for step work — you stay in the orchestrator chat.
 
@@ -146,7 +148,7 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 ```
 
 - **You never invoke step skills directly** — orchestrator spawns children.
-- **Release ticket first** when in the checklist — all Jira/PR titles reference it.
+- **`release.ticket_id`** from `release-ticket` step (files only — user key or placeholder; no Jira API).
 - **Platform UI (`*-ui`) / platform DB (RLG, OAuth) / Redpanda:** UI runbooks and YAML artifacts by default; live DB/UI/topic changes only if you explicitly ask.
 
 ---
@@ -155,11 +157,11 @@ You  →  destination-launch-orchestrator  (only skill in picker)
 
 | Phase | What we did |
 |---|---|
-| **1. Workflow design** | Seventeen steps in `platform/workflow.yaml` — DAG, dependencies, human summaries for checklists |
+| **1. Workflow design** | Sixteen steps in `platform/workflow.yaml` — release-ticket (files only); taxonomy before oauth |
 | **2. Agent architecture** | Thin **orchestrator** routes; **fat step skills** do the work; child agents keep context clean |
 | **3. Context model** | **Global** facts on `epic.md` (`## Global context` YAML); **local** detail on each `tasks/{step_id}.md` |
 | **4. Files-first demo** | `launches/` folder layout and `_template/` — **no Jira MCP required for hackathon** |
-| **5. Safety rules** | Confirm before release ticket, platform DB (RLG, OAuth), platform UI, and Redpanda steps; plan/runbook by default; one launch folder per destination |
+| **5. Safety rules** | Confirm before release ticket (files only), platform DB (RLG, OAuth), platform UI, and Redpanda steps; plan/runbook by default; one launch folder per destination |
 
 **Not done yet (expected hackathon work):** deeper step skills, validators, Jira swap-in, full code scaffolding, learning loop / template versioning, QA smoke step, multi-env keys.
 
@@ -186,25 +188,24 @@ Details: `platform/docs/FILES-MODEL.md`.
 
 | Step ID | What it covers | Depends on |
 |---|---|---|
-| `release-ticket` | Release ticket — **run first**; all Jira/PRs reference it | — |
-| `dist-types` | Thrift in `dist_types` | release-ticket |
-| `oauth` | OAuth client + endpoint config | dist-types |
-| `oauth-db-update` | OAuth integration DB update | oauth |
-| `taxonomy-connector-scaffold` | Taxonomy connector scaffold (dist_types + dist) | dist-types, oauth |
+| *(auto)* `release-ticket` | Release ticket id on file — **auto on create**, shown as **done** on checklist | — |
+| `taxonomy-connector-scaffold` | Taxonomy connector scaffold (dist_types + dist) | — |
 | `taxonomy-partner-flow` | Taxonomy partner flow (hooks + segment body) | taxonomy-connector-scaffold |
-| `partner-api-client` | Partner API client + constants | dist-types, oauth |
+| `taxonomy-ui` | Taxonomy endpoints via UI | taxonomy-connector-scaffold, taxonomy-partner-flow |
+| `rlg-addition` | RLG DB addition | — |
+| `partner-api-client` | Partner API client + constants | oauth |
 | `request-builder-sender` | Request builder + sender | partner-api-client |
 | `transposer-record-handler` | Transposer, record handler, field selector, metrics | request-builder-sender |
-| `rlg-addition` | RLG DB addition | release-ticket |
-| `delivery-endpoints-ui` | Delivery endpoints via UI | rlg-addition, dist-types, oauth-db-update |
-| `taxonomy-ui` | Taxonomy endpoints via UI | taxonomy-connector-scaffold, taxonomy-partner-flow |
+| `redpanda-topics` | Redpanda topic creation + YAML artifact | transposer-record-handler |
+| `oauth` | OAuth client + endpoint config | — |
+| `oauth-db-update` | OAuth integration DB update | oauth |
+| `delivery-endpoints-ui` | Delivery endpoints via UI | rlg-addition, oauth-db-update |
 | `ig-ui` | Integration group via UI | delivery-endpoints-ui, taxonomy-ui |
 | `da-ui` | Destination account via UI | ig-ui |
-| `redpanda-topics` | Redpanda topic creation + YAML artifact | transposer-record-handler |
 | `grafana-dashboards` | Dashboards and alerts | rlg-addition, transposer-record-handler, taxonomy-partner-flow |
 | `tech-discovery` | Confluence draft for QA | grafana-dashboards, transposer-record-handler |
 
-**Presets:** `minimal` (release-ticket + dist-types + oauth), `implementation` (through redpanda-topics), `all`.
+**Presets:** `taxonomy` (scaffold + partner-flow + taxonomy-ui), `minimal` (scaffold + partner-flow), `implementation` (through redpanda-topics), `all`.
 
 **Platform naming:** `*-ui` = platform UI runbooks (API later). `rlg-addition` / `oauth-db-update` = platform DB steps. **`taxonomy-connector-scaffold`** + **`taxonomy-partner-flow`** replace the old single taxonomy code step — scaffold writes Thrift/hook context; partner-flow writes `segment_body.*` for **`taxonomy-ui`**.
 
