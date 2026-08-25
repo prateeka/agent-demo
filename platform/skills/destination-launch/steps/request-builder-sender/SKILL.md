@@ -78,7 +78,7 @@ Mirror these classes; keep the same package/file layout under `handler/integrati
 | Response type | `.../handler/sender/http/StreamingPartnerResponse.java` |
 | Interfaces | `.../handler/type/one_to_one/OneToOneRequestBuilder.java`, `.../handler/sender/RequestSender.java` |
 | Retry wrapper | `.../handler/sender/SenderRetryDecorator.java` |
-| Tests | `src/test/.../integration/amazon_dm/TestAmazonDMRequestBuilder.java`, `TestAmazonDMRequestSender.java` |
+| Tests | `java/s2s_data_syncer/src/test/.../integration/amazon_dm/TestAmazonDMRequestBuilder.java`, `TestAmazonDMRequestSender.java` |
 
 ## Internal sub-steps (skill-owned)
 
